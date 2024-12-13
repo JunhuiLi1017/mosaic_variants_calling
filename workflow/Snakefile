@@ -1,0 +1,8 @@
+include: "rules/common.smk"
+include: "rules/qc.smk"
+include: "rules/map_reads.smk"
+include: "rules/variant_calling.smk"
+
+rule all:
+    input:
+        f"{outpath}/mosaic_summary.txt"
