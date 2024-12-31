@@ -1,2 +1,3 @@
 # target_sequencing_analysis
-# mosaic_variants_calling
+1. (vcf.gz.stats instead of vcf.gz.stat in this rule)we set --latency-wait 13500 instead of 500, since we didnt put output of mutect in rule all and this means rule mutect2 will be considered as success when all output files of mutect2 exits within latency-wait.
+2. You cannot directly use if-else in the input directive, but you can use functions or lambda expressions to resolve the input dynamically based on conditions.

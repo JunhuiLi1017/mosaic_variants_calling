@@ -2,9 +2,9 @@ rule map_raw:
     input:
         get_clean_fastq
     output:
-        o1=temp("{outpath}/{sample}/02_map/bwa/{sample}.raw.bam")
+        o1=temp("{outpath}/02_map/bwa/{sample}/{sample}.raw.bam")
     log:
-        l1="{outpath}/{sample}/02_map/logs/{sample}.bwa.log"
+        l1="{outpath}/02_map/logs/{sample}.bwa.raw.log"
     threads:
         8
     params:
@@ -18,12 +18,12 @@ rule map_raw:
 
 rule map_raw_sort:
     input:
-        "{outpath}/{sample}/02_map/bwa/{sample}.raw.bam"
+        "{outpath}/02_map/bwa/{sample}/{sample}.raw.bam"
     output:
-        sort_bam="{outpath}/{sample}/02_map/bwa/{sample}.sort.bam",
-        sort_stat="{outpath}/{sample}/02_map/bwa/{sample}.sort.stat"
+        sort_bam="{outpath}/02_map/bwa/{sample}/{sample}.sort.bam",
+        sort_stat="{outpath}/02_map/bwa/{sample}/{sample}.sort.stat"
     log:
-        "{outpath}/{sample}/02_map/logs/{sample}.raw.sort.log"
+        "{outpath}/02_map/logs/{sample}.raw.sort.log"
     threads:
         8
     shell:
@@ -35,12 +35,12 @@ rule map_raw_sort:
 
 rule remove_dup:
     input:
-        "{outpath}/{sample}/02_map/bwa/{sample}.sort.bam"
+        "{outpath}/02_map/bwa/{sample}/{sample}.sort.bam"
     output:
-        o1="{outpath}/02_map/dup/{sample}.sort.rmdup.bam",
-        o2="{outpath}/02_map/dup/{sample}.sort.rmdup.matrix"
+        o1="{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.bam",
+        o2="{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.matrix"
     log:
-        "{outpath}/logs/bwa/{sample}.sort.rmdup.log"
+        "{outpath}/02_map/logs/{sample}.sort.rmdup.log"
     threads:
         8
     params:
@@ -52,11 +52,11 @@ rule remove_dup:
 
 rule BaseRecalibrator:
     input:
-        "{outpath}/{sample}/02_map/dup/{sample}.sort.rmdup.bam"
+        "{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.bam"
     output:
-        o1="{outpath}/{sample}/02_map/bqsr/{sample}.recal_data.table"
+        o1="{outpath}/02_map/bqsr/{sample}/{sample}.recal_data.table"
     log:
-        "{outpath}/logs/bwa/{sample}.BQSR.log"
+        "{outpath}/02_map/logs/{sample}.BQSR.log"
     threads:
         8
     params:
@@ -72,19 +72,19 @@ rule BaseRecalibrator:
 
 rule ApplyBQSR:
     input:
-        i1="{outpath}/{sample}/02_map/dup/{sample}.sort.rmdup.bam",
-        i2="{outpath}/{sample}/02_map/bqsr/{sample}.recal_data.table"
+        i1="{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.bam",
+        i2="{outpath}/02_map/bqsr/{sample}/{sample}.recal_data.table"
     output:
-        o1="{outpath}/{sample}/02_map/bqsr/{sample}.sort.rmdup.bqsr.bam",
-        o2="{outpath}/{sample}/02_map/bqsr/{sample}.sort.rmdup.bqsr.bai"
+        o1="{outpath}/02_map/bqsr/{sample}/{sample}.sort.rmdup.bqsr.bam",
+        o2="{outpath}/02_map/bqsr/{sample}/{sample}.sort.rmdup.bqsr.bai"
     log:
-        "{outpath}/logs/bwa/{sample}.applyBQSR.log"
+        "{outpath}/02_map/logs/{sample}.applyBQSR.log"
     threads:
         8
     params:
         mem="4000",
         ref=config['reference'],
-        prefix="{outpath}/{sample}/02_map/bqsr/{sample}"
+        prefix="{outpath}/02_map/bqsr/{sample}/{sample}"
     shell:
         """
         java -Xms10g -XX:ParallelGCThreads={threads} -jar /home/junhui.li11-umw/anaconda3/envs/snakemake/share/gatk4-4.1.8.1-0/gatk-package-4.1.8.1-local.jar ApplyBQSR -I {input.i1} -O {output.o1} -R {params.ref} --bqsr-recal-file {input.i2} > {log} 2>&1

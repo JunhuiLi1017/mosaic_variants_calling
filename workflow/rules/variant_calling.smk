@@ -2,20 +2,19 @@ rule Mutect2:
 	message:
 		"""
 		---
-		using mutect2 4.0.12.0 instead of 4.1.8.1 to call variants, since 4.1.8.1 didnt take account of overlapping of paired end reads.
+		using mutect2 4.1.8.1
 		---
 		"""
 	input:
-		"{outpath}/{sample}/02_map/bqsr/{sample}.sort.rmdup.bqsr.bam"
+		"{outpath}/02_map/bqsr/{sample}/{sample}.sort.rmdup.bqsr.bam"
 	output:
-		raw_vcf="{outpath}/{sample}/03_variants/mutect2/result/sub/{sample}.{individual_chr}.MT2PON.vcf.gz",
-		raw_stat="{outpath}/{sample}/03_variants/mutect2/result/sub/{sample}.{individual_chr}.MT2PON.vcf.gz.stat"
+		raw_vcf="{outpath}/03_variants/mutect2/result/sub/{sample}/{sample}.{individual_chr}.mt2pon.vcf.gz",
+		raw_stat="{outpath}/03_variants/mutect2/result/sub/{sample}/{sample}.{individual_chr}.mt2pon.vcf.gz.stats"
 	log:
-		"{outpath}/{sample}/03_variants/mutect2/logs/{sample}.{individual_chr}.mutect.log"
+		"{outpath}/03_variants/logs/{sample}.{individual_chr}.mutect.log"
 	threads:
 		8
 	params:
-		mem="4000",
 		pon=config['pon'],
 		af_only_gnomad=config['af_only_gnomad'],
 		ref=config['reference'],
@@ -24,11 +23,7 @@ rule Mutect2:
 		gatk=config['gatk_current_using']
 	shell:
 		'''
-		set +u
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.0.xx 
 		java -Xms10g -XX:ParallelGCThreads={threads} -jar {params.gatk} Mutect2 -R {params.ref} -I {input} --pon {params.pon} -tumor {params.sample} --germline-resource {params.af_only_gnomad} -L {params.interval_list} --interval-padding 100 -O {output.raw_vcf} > {log} 2>&1
-		conda deactivate
-		set -u
 		'''
 
 rule vcf_args:
@@ -39,11 +34,11 @@ rule vcf_args:
 		---
 		"""
 	input:
-		lambda wildcards: [f"{outpath}/{wildcards.sample}/03_variants/mutect2/result/sub/{wildcards.sample}.{chr}.MT2PON.vcf.gz" for chr in chromosomes]
+		lambda wildcards: [f"{outpath}/03_variants/mutect2/result/sub/{wildcards.sample}/{wildcards.sample}.{chr}.mt2pon.vcf.gz" for chr in chromosomes]
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/result/{sample}.args"
+		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.args"
 	log:
-		"{outpath}/{sample}/03_variants/mutect2/logs/{sample}.args.logs"
+		"{outpath}/03_variants/logs/{sample}.args.logs"
 	shell:
 		'''
 		ls {input} > {output}
@@ -59,11 +54,11 @@ rule vcf_concat:
 		output: {output}
 		"""
 	input:
-		"{outpath}/{sample}/03_variants/mutect2/result/{sample}.args"
+		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.args"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.vcf.gz"
+		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz"
 	log:
-		"{outpath}/{u.sample}/03_variants/mutect2/logs/{sample}.concat.log"
+		"{outpath}/03_variants/logs/{sample}.concat.log"
 	shell:
 		'''
 		vcf-concat -f {input}  |  bgzip > {output}
@@ -76,9 +71,9 @@ rule vcf_index:
 		output: {output}
 		"""
 	input:
-		"{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.vcf.gz"
+		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz"
 	output:
-		protected("{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.vcf.gz.tbi")
+		protected("{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz.tbi")
 	shell:
 		'''
 		tabix -p vcf {input}
@@ -86,15 +81,15 @@ rule vcf_index:
 
 rule merge_mutectstats:
 	input:
-		lambda wildcards: [f"{wildcards.outpath}/{wildcards.sample}/03_variants/mutect2/result/sub/{wildcards.sample}.{chr}.MT2PON.vcf.gz.stat" for chr in chromosomes]
-		#expand("{outpath}/{key}/03_variants/mutect2/result/sub/{key}.{chr}.MT2PON.vcf.gz.stat", outpath=outpath, key=sample.keys(), chr=chromosomes)
+		lambda wildcards: [f"{wildcards.outpath}/03_variants/mutect2/result/sub/{wildcards.sample}/{wildcards.sample}.{chr}.mt2pon.vcf.gz.stats" for chr in chromosomes]
+		#expand("{outpath}/{key}/03_variants/mutect2/result/sub/{key}.{chr}.mt2pon.vcf.gz.stats", outpath=outpath, key=sample.keys(), chr=chromosomes)
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.vcf.gz.stats"
+		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz.stats"
 	params:
-		list_para = lambda wildcards: ' '.join([f"--stats {wildcards.outpath}/{wildcards.sample}/03_variants/mutect2/result/sub/{wildcards.sample}.{chr}.MT2PON.vcf.gz.stat" for chr in chromosomes]),
+		list_para = lambda wildcards: ' '.join([f"--stats {wildcards.outpath}/03_variants/mutect2/result/sub/{wildcards.sample}/{wildcards.sample}.{chr}.mt2pon.vcf.gz.stats" for chr in chromosomes]),
 		gatk=config['gatk_current_using']
 	log:
-		"{outpath}/{sample}/03_variants/mutect2/logs/{sample}.MergeMutectStats.log"
+		"{outpath}/03_variants/logs/{sample}.MergeMutectStats.log"
 	shell:
 		'''
 		java -Xms10g -XX:ParallelGCThreads={threads} -jar {params.gatk} MergeMutectStats {params.list_para} -O {output} > {log} 2>&1
@@ -102,17 +97,16 @@ rule merge_mutectstats:
 
 rule FilterMutectCall:
 	input:
-		vcf="{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.vcf.gz",
-		stats="{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.vcf.gz.stats",
-		index="{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.vcf.gz.tbi"
+		vcf="{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz",
+		stats="{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz.stats",
+		index="{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz.tbi"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.filter.vcf.gz"
+		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.filter.vcf.gz"
 	log:
-		"{outpath}/{sample}/03_variants/mutect2/logs/{sample}.filter.log"
+		"{outpath}/03_variants/logs/{sample}.filter.log"
 	threads:
 		8
 	params:
-		mem="4000",
 		ref=config['reference'],
 		gatk=config['gatk_current_using']
 	shell:
@@ -122,9 +116,9 @@ rule FilterMutectCall:
 
 rule MT2_initial_filter:
 	input:
-		vcf="{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.filter.vcf.gz"
+		vcf="{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.filter.vcf.gz"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/filter/{sample}.mt2pon.AF0.02.bed"
+		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.bed"
 	params:
 		sample="{sample}",
 		af_threshold="0.03" if config["pcr_based"] == True else "0.02"
@@ -135,9 +129,9 @@ rule MT2_initial_filter:
 
 rule repeat_filter:
 	input:
-		mt2pon="{outpath}/{sample}/03_variants/mutect2/filter/{sample}.mt2pon.AF0.02.bed"
+		mt2pon="{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.bed"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/filter/{sample}.mt2pon.AF0.02.noSegDup.bed"
+		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.noSegDup.bed"
 	params:
 		segdup=config['SegDup_and_clustered']
 	shell:
@@ -147,9 +141,9 @@ rule repeat_filter:
 
 rule annovar_formatter:
 	input:
-		"{outpath}/{sample}/03_variants/mutect2/filter/{sample}.mt2pon.AF0.02.noSegDup.bed"
+		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.noSegDup.bed"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/filter/{sample}.mt2pon.AF0.02.ANNOVAR.list"
+		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.ANNOVAR.list"
 	shell:
 		'''
 		cat {input} | awk '{{OFS="\\t\";len=length($4)-length($5);if(len<=0){{print $1,$3,$3,$4,$5,$6}}if(len>0){{print $1,$3,$3+len,$4,$5,$6}}}}'> {output}
@@ -158,18 +152,18 @@ rule annovar_formatter:
 
 rule MAF0_extraction_SNV:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/filter/{sample}.mt2pon.AF0.02.ANNOVAR.list"
+		file1="{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.ANNOVAR.list"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/filter/{sample}.MAF0.SNV.chr.bed"
+		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.SNV.chr.bed"
 	shell:
 		"cat {input.file1}|awk '\''{{OFS=\"\\t\";print $1,$2-1,$2,$4,$5,$6}}'\'' | awk '\''length($4)==1 && length($5)==1'\'' |awk 'BEGIN{{OFS=\"\\t\"}} $1=\"chr\"$1' > {output}"
 
 
 rule MAF0_extraction_INS:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/filter/{sample}.mt2pon.AF0.02.ANNOVAR.list"
+		file1="{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.ANNOVAR.list"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/filter/{sample}.MAF0.INS.chr.bed"
+		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.INS.chr.bed"
 	params:
 		allrepeats_forindel=config['allrepeats_forindel']
 	shell:
@@ -177,9 +171,9 @@ rule MAF0_extraction_INS:
 
 rule MAF0_extraction_DEL:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/filter/{sample}.mt2pon.AF0.02.ANNOVAR.list"
+		file1="{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.ANNOVAR.list"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/filter/{sample}.MAF0.DEL.chr.bed"
+		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.DEL.chr.bed"
 	params:
 		allrepeats_forindel=config['allrepeats_forindel']
 	shell:
@@ -187,13 +181,13 @@ rule MAF0_extraction_DEL:
 
 rule rename_bam:
 	input:
-		bam="{outpath}/{sample}/02_map/bqsr/{sample}.sort.rmdup.bqsr.bam",
-		bai="{outpath}/{sample}/02_map/bqsr/{sample}.sort.rmdup.bqsr.bai"
+		bam="{outpath}/02_map/bqsr/{sample}/{sample}.sort.rmdup.bqsr.bam",
+		bai="{outpath}/02_map/bqsr/{sample}/{sample}.sort.rmdup.bqsr.bai"
 	output:
-		bam="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/{sample}.bam",
-		bai="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/{sample}.bai"
+		bam="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/{sample}.bam",
+		bai="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/{sample}.bai"
 	params:
-		lndir="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/"
+		lndir="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/"
 	shell:
 		'''
 			mkdir -p {params.lndir}
@@ -203,16 +197,16 @@ rule rename_bam:
 
 rule feature_extraction_SNV:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/filter/{sample}.MAF0.SNV.chr.bed",
-		file2="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/{sample}.bam"
+		file1="{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.SNV.chr.bed",
+		file2="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/{sample}.bam"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.SNV.features"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.SNV.features"
 	params:
-		outdir="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/",
+		outdir="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/",
 		umap=config['umap'],
 		ref=config['reference']
 	log:
-		"{outpath}/{sample}/03_variants/mutect2/log/{sample}.SNV.features.log"
+		"{outpath}/03_variants/logs/{sample}.SNV.features.log"
 	shell:
 		'''
 		source ~/anaconda3/etc/profile.d/conda.sh && conda activate py3.7.1 
@@ -223,16 +217,16 @@ rule feature_extraction_SNV:
 
 rule feature_extraction_INS:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/filter/{sample}.MAF0.INS.chr.bed",
-		file2="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/{sample}.bam"
+		file1="{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.INS.chr.bed",
+		file2="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/{sample}.bam"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.INS.features"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.INS.features"
 	params:
-		outdir="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/",
+		outdir="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/",
 		umap=config['umap'],
 		ref=config['reference']
 	log:
-		"{outpath}/{sample}/03_variants/mutect2/log/{sample}.INS.features.log"
+		"{outpath}/03_variants/logs/{sample}.INS.features.log"
 	shell:
 		'''
 		source ~/anaconda3/etc/profile.d/conda.sh && conda activate py3.7.1 
@@ -243,16 +237,16 @@ rule feature_extraction_INS:
 
 rule feature_extraction_DEL:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/filter/{sample}.MAF0.DEL.chr.bed",
-		file2="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/{sample}.bam"
+		file1="{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.DEL.chr.bed",
+		file2="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/{sample}.bam"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.DEL.features"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.DEL.features"
 	params:
-		outdir="{outpath}/{sample}/02_map/bqsr/sort.rmdup.bqsr/",
+		outdir="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/",
 		umap=config['umap'],
 		ref=config['reference']
 	log:
-		"{outpath}/{sample}/03_variants/mutect2/log/{sample}.DEL.features.log"
+		"{outpath}/03_variants/logs/{sample}.DEL.features.log"
 	shell:
 		'''
 		source ~/anaconda3/etc/profile.d/conda.sh && conda activate py3.7.1 
@@ -263,9 +257,9 @@ rule feature_extraction_DEL:
 
 rule g1000_avail_acess_filter_SNV:
 	input:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.SNV.features"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.SNV.features"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.SNV.no1000g.features"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.SNV.no1000g.features"
 	params:
 		avail_acess_1000g=config['avail_acess_1000g']
 	shell:
@@ -275,9 +269,9 @@ rule g1000_avail_acess_filter_SNV:
 
 rule g1000_avail_acess_filter_INS:
 	input:
-		feature="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.INS.features"
+		feature="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.INS.features"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.INS.no1000g.features"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.INS.no1000g.features"
 	params:
 		avail_acess_1000g=config['avail_acess_1000g']
 	shell:
@@ -287,9 +281,9 @@ rule g1000_avail_acess_filter_INS:
 
 rule g1000_avail_acess_filter_DEL:
 	input:
-		feature="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.DEL.features"
+		feature="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.DEL.features"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.DEL.no1000g.features"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.DEL.no1000g.features"
 	params:
 		avail_acess_1000g=config['avail_acess_1000g']
 	shell:
@@ -299,9 +293,9 @@ rule g1000_avail_acess_filter_DEL:
 
 rule Prediction_SNV:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.SNV.no1000g.features"
+		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.SNV.no1000g.features"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.predictions"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.predictions"
 	params:
 		refine_beta=config['refine_beta']
 	shell:
@@ -311,9 +305,9 @@ rule Prediction_SNV:
 
 rule Prediction_INS:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.no1000g.INS.features"
+		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.no1000g.INS.features"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.predictions"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.predictions"
 	params:
 		refine_beta="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/insertions_250x.RF.rds"
 	shell:
@@ -323,9 +317,9 @@ rule Prediction_INS:
 
 rule Prediction_DEL:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.no1000g.DEL.features"
+		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.no1000g.DEL.features"
 	output:
-		"{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.predictions"
+		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.predictions"
 	params:
 		refine_beta="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/insertions_250x.RF.rds"
 	shell:
@@ -335,13 +329,13 @@ rule Prediction_DEL:
 
 rule Annotation_SNV_Mosaic:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.predictions"
+		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.predictions"
 	output:
-		inputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.{ref_version}.input.predictions.txt",
-		outputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.annoSNV.{ref_version}_multianno.txt"
+		inputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.input.predictions.txt",
+		outputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.annoSNV.{ref_version}_multianno.txt"
 	params:
-		outdir="{outpath}/{sample}/03_variants/mutect2/feature",
-		outputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.annoSNV"
+		outdir="{outpath}/03_variants/mutect2/feature/{sample}",
+		outputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.annoSNV"
 	shell:
 		'''
 		grep "mosaic" {input.file1} | cut -f 1,35 | awk 'BEGIN {{ FS = "~" }} ; {{ print $2"\\t"$3"\\t"$3"\\t"$4"\\t"$5"\\t"$6 }}' | tail -n +2 | awk '$6=="mosaic" {{print $0}}' > {output.inputanno}
@@ -351,13 +345,13 @@ rule Annotation_SNV_Mosaic:
 
 rule Annotation_INS_Mosaic:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.predictions"
+		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.predictions"
 	output:
-		inputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.{ref_version}.input.predictions.txt",
-		mosaic="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.mosaic.predictions.{ref_version}_multianno.txt"
+		inputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.input.predictions.txt",
+		mosaic="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.mosaic.predictions.{ref_version}_multianno.txt"
 	params:
-		outdir="{outpath}/{sample}/03_variants/mutect2/feature",
-		outputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.ouput.predictions"
+		outdir="{outpath}/03_variants/mutect2/feature/{sample}",
+		outputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.ouput.predictions"
 	shell:
 		'''
 		#Rscript /home/junhui.li11-umw/Pipeline/MosaicPipeline/mosaic_bin/choooseMosaicVar.R -i {input.file1} -o {output.mosaic} -t {output.inputanno}
@@ -369,13 +363,13 @@ rule Annotation_INS_Mosaic:
 
 rule Annotation_DEL_Mosaic:
 	input:
-		file1="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.predictions"
+		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.predictions"
 	output:
-		inputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.{ref_version}.input.predictions.txt",
-		mosaic="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.mosaic.predictions.{ref_version}_multianno.txt"
+		inputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.input.predictions.txt",
+		mosaic="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.mosaic.predictions.{ref_version}_multianno.txt"
 	params:
-		outdir="{outpath}/{sample}/03_variants/mutect2/feature",
-		outputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.ouput.predictions"
+		outdir="{outpath}/03_variants/mutect2/feature/{sample}",
+		outputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.ouput.predictions"
 	shell:
 		'''
 		grep "hap=3" {input.file1} > {output.mosaic}
@@ -385,13 +379,13 @@ rule Annotation_DEL_Mosaic:
 
 rule extrac_SNVsubvcf:
 	input:
-		vcf="{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.filter.vcf.gz",
-		inputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.{ref_version}.input.predictions.txt"
+		vcf="{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.filter.vcf.gz",
+		inputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.input.predictions.txt"
 	output:
-		vcf="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.sub.vcf",
-		tmp="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.sub.vcf.tmp",
-		bed="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.subvcf.bed",
-		dpaf="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.Geno.DP.AF.txt"
+		vcf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.vcf",
+		tmp="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.vcf.tmp",
+		bed="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.subvcf.bed",
+		dpaf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.Geno.DP.AF.txt"
 	shell:
 		'''
 		awk '$6=="mosaic"{{print $0}}' {input.inputanno} | awk 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$2}}' | sort -k1,1 -k2,2n > {output.bed}
@@ -402,13 +396,13 @@ rule extrac_SNVsubvcf:
 
 rule extrac_INSsubvcf:
 	input:
-		vcf="{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.filter.vcf.gz",
-		inputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.{ref_version}.input.predictions.txt"
+		vcf="{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.filter.vcf.gz",
+		inputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.input.predictions.txt"
 	output:
-		vcf="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.sub.vcf",
-		tmp="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.sub.vcf.tmp",
-		bed="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.subvcf.bed",
-		dpaf="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.INS.Geno.DP.AF.txt"
+		vcf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.sub.vcf",
+		tmp="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.sub.vcf.tmp",
+		bed="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.subvcf.bed",
+		dpaf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.Geno.DP.AF.txt"
 	shell:
 		'''
 		cat {input.inputanno} | awk 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$2}}' | sort -k1,1 -k2,2n > {output.bed}
@@ -419,13 +413,13 @@ rule extrac_INSsubvcf:
 		
 rule extrac_DELsubvcf:
 	input:
-		vcf="{outpath}/{sample}/03_variants/mutect2/result/{sample}.mt2pon.filter.vcf.gz",
-		inputanno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.{ref_version}.input.predictions.txt"
+		vcf="{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.filter.vcf.gz",
+		inputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.input.predictions.txt"
 	output:
-		vcf="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.sub.vcf",
-		tmp="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.sub.vcf.tmp",
-		bed="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.subvcf.bed",
-		dpaf="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.DEL.Geno.DP.AF.txt"
+		vcf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.sub.vcf",
+		tmp="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.sub.vcf.tmp",
+		bed="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.subvcf.bed",
+		dpaf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.Geno.DP.AF.txt"
 	shell:
 		'''
 		cat {input.inputanno} | awk 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$2}}' | sort -k1,1 -k2,2n > {output.bed}
@@ -434,52 +428,67 @@ rule extrac_DELsubvcf:
 		cut -f 1,2,4,5,10 {output.tmp} | sed "s/:/\t/g" | cut -f 1-8 | sed 's/,/\t/g' | awk 'BEGIN{{print "Chr\tpos\tREF\tALT\tGenotype\tDPT_REF\tDPT_ALT\tAF\tDPT"}}1' > {output.dpaf}
 		'''
 
-rule gnomAD_filter_vcf:
+rule gnomAD_vcf_tier2_3_subchr:
 	input:
-		vcf="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.sub.vcf",
-		gnomad_2_1_1_0_001="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/{ref_version}_gnomad211_exome_genome_afpop_gt_0.001_chr.txt",
-		gnomad_2_1_1_0="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/{ref_version}_gnomad211_exome_genome_afpop_gt_0_chr.txt"
+		vcf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.vcf",
 	output:
-		vcf4="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.sub.MFv4.vcf",
-		vcf3="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.sub.MFv3.vcf"
+		vcf_tier3="{outpath}/03_variants/mutect2/tier/{sample}/overlap_gnomAD/{sample}.{cov}.SNV.{ref_version}.sub.tier3.{individual_chr}.vcf",
+		vcf_tier2="{outpath}/03_variants/mutect2/tier/{sample}/overlap_gnomAD/{sample}.{cov}.SNV.{ref_version}.sub.tier2.{individual_chr}.vcf"
+	params:
+		gnomad_2_1_1_0_001="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/sub_chr/{ref_version}_gnomad211_exome_genome_afpop_gt_0.001_chr_snponly_{individual_chr}.txt",
+		gnomad_2_1_1_0="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/sub_chr/{ref_version}_gnomad211_exome_genome_afpop_gt_0_le_0.001_chr_snponly_{individual_chr}.txt"
 	shell:
 		'''
-		awk "NR==FNR{{c[$1,$2,$4,$5]++;next}} !(c[$1,$2,$4,$5]) {{print $0}}" {input.gnomad_2_1_1_0_001} {input.vcf} > {output.vcf4}
-		awk "NR==FNR{{c[$1,$2,$4,$5]++;next}} !(c[$1,$2,$4,$5]) {{print $0}}" {input.gnomad_2_1_1_0} {input.vcf} > {output.vcf3}
+		awk 'NR==FNR{{c[$1,$2,$4,$5]=$0}}NR!=FNR{{if(c[$1,$2,$4,$5]) {{print $0}}}}' {params.gnomad_2_1_1_0_001} {input.vcf} > {output.vcf_tier3}
+		awk 'NR==FNR{{c[$1,$2,$4,$5]=$0}}NR!=FNR{{if(c[$1,$2,$4,$5]) {{print $0}}}}' {params.gnomad_2_1_1_0} {input.vcf} > {output.vcf_tier2}
 		'''
 
-rule gnomAD_filter_anno:
+rule gather_gnomAD_vcf_tier2_3:
 	input:
-		anno="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.annoSNV.{ref_version}_multianno.txt",
-		vcf4="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.{ref_version}.sub.MFv4.vcf",
-		vcf3="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.SNV.{ref_version}.sub.MFv3.vcf"
+		vcf_tier3=lambda wildcards: [f"{outpath}/03_variants/mutect2/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier3.{chr}.vcf" for chr in chromosomes],
+		vcf_tier2=lambda wildcards: [f"{outpath}/03_variants/mutect2/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier2.{chr}.vcf" for chr in chromosomes]		
 	output:
-		anno4="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.annoSNV.MFv4.{ref_version}_multianno.txt",
-		anno3="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.annoSNV.MFv3.{ref_version}_multianno.txt"
+		vcf_tier3="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier3.vcf",
+		vcf_tier2="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier2.vcf"
 	shell:
 		'''
-		cat <(head -n 1 {input.anno}) <(awk 'NR==FNR{{c[$1,$2,$4,$5]++;next}} c[$1,$2,$4,$5]>0{{print $0}}' {input.vcf4} {input.anno}) > {output.anno4}
-		cat <(head -n 1 {input.anno}) <(awk 'NR==FNR{{c[$1,$2,$4,$5]++;next}} c[$1,$2,$4,$5]>0{{print $0}}' {input.vcf3} {input.anno}) > {output.anno3}
+		cat {input.vcf_tier3} > {output.vcf_tier3}
+		cat {input.vcf_tier2} > {output.vcf_tier2}
+		'''
+
+rule gnomAD_vcf_tier1:
+	input:
+		vcf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.vcf",
+		vcf_tier3="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier3.vcf",
+		vcf_tier2="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier2.vcf"
+	output:
+		vcf_tier1="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier1.vcf"
+	shell:
+		'''
+		awk 'NR==FNR{{c[$1,$2,$4,$5]=$0}}NR!=FNR{{if(!c[$1,$2,$4,$5]) {{print $0}}}}' <(cat {input.vcf_tier2} {input.vcf_tier3}) {input.vcf} > {output.vcf_tier1}
 		'''
 
 rule mark_tier123:
 	input:
-		anno5="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.annoSNV.{ref_version}_multianno.txt",
-		anno4="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.annoSNV.MFv4.{ref_version}_multianno.txt",
-		anno3="{outpath}/{sample}/03_variants/mutect2/feature/{sample}.{cov}.annoSNV.MFv3.{ref_version}_multianno.txt"
+		anno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.annoSNV.{ref_version}_multianno.txt",
+		vcf_tier3="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier3.vcf",
+		vcf_tier2="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier2.vcf",
+		vcf_tier1="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier1.vcf"
 	output:
-		tier="{outpath}/{sample}/03_variants/mutect2/tier/{sample}.{cov}.SNV.tier.{ref_version}_multianno.txt"
+		tier_anno="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.tier.{ref_version}_multianno.txt"
 	shell:
 		'''
-		awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$2,$3,$5,$6]) {{print "tier2\t"$0}} else {{print "tier3\t"$0}}}}' {input.anno4} <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier1\t"$0}} else {{print "tier3\t"$0}}}}' {input.anno3} {input.anno5}) | sed 's/tier2\ttier1/tier1/g' | sed 's/tier2\ttier3/tier2/g' | sed 's/tier3\ttier3/tier3/g' |sed 's/tier3\ttier1/tier1/g' | sed 's/tier1\tChr/Tier\tChr/' > {output.tier}
+		cat <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier1\t"$0}}}}' {input.vcf_tier1} {input.anno}) <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier2\t"$0}}}}' {input.vcf_tier2} {input.anno}) <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier3\t"$0}}}}' {input.vcf_tier3} {input.anno}) > {output.tier_anno}
 		'''
 
 rule summary:
 	input:
-		expand(["{outpath}/{u.sample}/03_variants/mutect2/tier/{u.sample}.{cov}.SNV.tier.{ref_version}_multianno.txt"], outpath=outpath, u=units.itertuples(), cov=cov, ref_version=ref_version)
+		#if another job is running, same output "{outpath}/mosaic_summary.txt" will be rewriten or will stop in advance.
+		#expand(["{outpath}/03_variants/mutect2/tier/{u.sample}/{u.sample}.{cov}.SNV.tier.{ref_version}_multianno.txt"], outpath=outpath, u=units.itertuples(), cov=cov, ref_version=ref_version)
+		"{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.tier.{ref_version}_multianno.txt"
 	output:
-		stat="{outpath}/mosaic_summary.txt"
+		"{outpath}/{sample}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt"
 	shell:
 		'''
-		wc -l {input} > {output.stat}
+		wc -l {input} > {output}
 		'''

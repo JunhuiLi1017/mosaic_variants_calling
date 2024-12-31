@@ -2,11 +2,11 @@ rule fastp:
     input:
         unpack(get_fastq)
     output:
-        temp(["{outpath}/{sample}/01_multiqc/fastp/{sample}.R1.fastq.gz", "{outpath}/{sample}/01_multiqc/fastp/{sample}.R2.fastq.gz"]) if paired_end else temp("{outpath}/{sample}/01_multiqc/fastp/{sample}.R1.fastq.gz"),
-        j="{outpath}/{sample}/01_multiqc/fastp/{sample}.json", 
-        h="{outpath}/{sample}/01_multiqc/fastp/{sample}.html"
+        temp(["{outpath}/01_multiqc/fastp/{sample}/{sample}.R1.fastq.gz", "{outpath}/01_multiqc/fastp/{sample}/{sample}.R2.fastq.gz"]) if paired_end else temp("{outpath}/01_multiqc/fastp/{sample}/{sample}.R1.fastq.gz"),
+        j="{outpath}/01_multiqc/fastp/{sample}/{sample}.json", 
+        h="{outpath}/01_multiqc/fastp/{sample}/{sample}.html"
     log:
-        "{outpath}/{sample}/01_multiqc/logs/{sample}.fastp.log"
+        "{outpath}/01_multiqc/logs/{sample}.fastp.log"
     params:
         trim_expr= "" if config['trim'] == False else f"-f {trim_value} -F {trim_value}"
     run:
@@ -19,14 +19,14 @@ rule fastqc:
     input:
         get_clean_fastq
     output:
-        ["{outpath}/{sample}/01_multiqc/fastqc/{sample}.R1_fastqc.html", "{outpath}/{sample}/01_multiqc/fastqc/{sample}.R2_fastqc.html"] if paired_end else "{outpath}/{sample}/01_multiqc/fastqc/{sample}.R1_fastqc.html",
-        ["{outpath}/{sample}/01_multiqc/fastqc/{sample}.R1_fastqc.zip", "{outpath}/{sample}/01_multiqc/fastqc/{sample}.R2_fastqc.zip"] if paired_end else "{outpath}/{sample}/01_multiqc/fastqc/{sample}.R1_fastqc.zip"
+        ["{outpath}/01_multiqc/fastqc/{sample}.R1_fastqc.html", "{outpath}/01_multiqc/fastqc/{sample}.R2_fastqc.html"] if paired_end else "{outpath}/01_multiqc/fastqc/{sample}.R1_fastqc.html",
+        ["{outpath}/01_multiqc/fastqc/{sample}.R1_fastqc.zip", "{outpath}/01_multiqc/fastqc/{sample}.R2_fastqc.zip"] if paired_end else "{outpath}/01_multiqc/fastqc/{sample}.R1_fastqc.zip"
     conda:
         "../envs/multiqc_env.yaml"
     log:
-        "{outpath}/{sample}/01_multiqc/logs/{sample}.fastqc.log"
+        "{outpath}/01_multiqc/logs/{sample}.fastqc.log"
     params:
-        out_fastqc="{outpath}/{sample}/01_multiqc/fastqc"
+        out_fastqc="{outpath}/01_multiqc/fastqc/{sample}"
     shell:
         "fastqc -o {params.out_fastqc} {input} > {log} 2>&1"
 
@@ -34,12 +34,15 @@ rule multiqc:
     input:
         get_multiqc_input
     output:
-        "{outpath}/{sample}/01_multiqc/multiqc_report.html"
+        "{outpath}/01_multiqc/multiqc_report.html"
+    params:
+        outdir="{outpath}/01_multiqc",
+        indir="{outpath}/01_multiqc/fastqc"
     conda:
         "../envs/multiqc_env.yaml"
     log:
-        "{outpath}/{sample}/01_multiqc/logs/multiqc.log"
+        "{outpath}/01_multiqc/logs/multiqc.log"
     shell:
         """
-        multiqc -o {outpath}/{sample}/01_multiqc {outpath}/{sample}/01_multiqc/fastqc {outpath}/{sample}/02_map/bqsr_stat/ --force
+        multiqc -o {params.outdir} {params.indir} --force
         """
