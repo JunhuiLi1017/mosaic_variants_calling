@@ -34,7 +34,7 @@ rule vcf_args:
 		---
 		"""
 	input:
-		lambda wildcards: [f"{outpath}/03_variants/mutect2/result/sub/{wildcards.sample}/{wildcards.sample}.{chr}.mt2pon.vcf.gz" for chr in chromosomes]
+		lambda wildcards: [f"{wildcards.outpath}/03_variants/mutect2/result/sub/{wildcards.sample}/{wildcards.sample}.{chr}.mt2pon.vcf.gz" for chr in chromosomes]
 	output:
 		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.args"
 	log:
@@ -305,7 +305,7 @@ rule Prediction_SNV:
 
 rule Prediction_INS:
 	input:
-		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.no1000g.INS.features"
+		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.INS.no1000g.features"
 	output:
 		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.predictions"
 	params:
@@ -317,7 +317,7 @@ rule Prediction_INS:
 
 rule Prediction_DEL:
 	input:
-		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.no1000g.DEL.features"
+		file1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.DEL.no1000g.features"
 	output:
 		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.predictions"
 	params:
@@ -445,8 +445,8 @@ rule gnomAD_vcf_tier2_3_subchr:
 
 rule gather_gnomAD_vcf_tier2_3:
 	input:
-		vcf_tier3=lambda wildcards: [f"{outpath}/03_variants/mutect2/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier3.{chr}.vcf" for chr in chromosomes],
-		vcf_tier2=lambda wildcards: [f"{outpath}/03_variants/mutect2/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier2.{chr}.vcf" for chr in chromosomes]		
+		vcf_tier3=lambda wildcards: [f"{wildcards.outpath}/03_variants/mutect2/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier3.{chr}.vcf" for chr in chromosomes],
+		vcf_tier2=lambda wildcards: [f"{wildcards.outpath}/03_variants/mutect2/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier2.{chr}.vcf" for chr in chromosomes]		
 	output:
 		vcf_tier3="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier3.vcf",
 		vcf_tier2="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier2.vcf"
@@ -485,10 +485,16 @@ rule summary:
 	input:
 		#if another job is running, same output "{outpath}/mosaic_summary.txt" will be rewriten or will stop in advance.
 		#expand(["{outpath}/03_variants/mutect2/tier/{u.sample}/{u.sample}.{cov}.SNV.tier.{ref_version}_multianno.txt"], outpath=outpath, u=units.itertuples(), cov=cov, ref_version=ref_version)
-		"{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.tier.{ref_version}_multianno.txt"
+		snv="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.tier.{ref_version}_multianno.txt",
+		ins="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.Geno.DP.AF.txt",
+		del1="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.Geno.DP.AF.txt"
 	output:
-		"{outpath}/{sample}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt"
+		snv="{outpath}/{sample}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt",
+		ins="{outpath}/{sample}.{cov}.INS.{ref_version}.mosaic_summary.txt",
+		del1="{outpath}/{sample}.{cov}.DEL.{ref_version}.mosaic_summary.txt"
 	shell:
 		'''
-		wc -l {input} > {output}
+		wc -l {input.snv} > {output.snv}
+		wc -l {input.ins} > {output.ins}
+		wc -l {input.del1} > {output.del1}
 		'''

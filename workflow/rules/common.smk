@@ -4,7 +4,7 @@ import os
 
 from snakemake.utils import validate
 
-configfile: "../config/config.yaml"
+configfile: "config/config.yaml"
 
 validate(config, schema = "../schemas/config.schema.yaml")
 
@@ -76,7 +76,7 @@ def get_multiqc_input(wildcards):
 
 def get_reads_group(wildcards):
     """Denote sample name and platform in read group."""
-    return r"-R '@RG\tID:{sample}\tSM:{sample}\tPL:{platform}'".format(
+    return r"-R '@RG\tID:{sample}\tPL:{platform}\tSM:{sample}'".format(
         sample=wildcards.sample,
         platform=units.loc[(wildcards.sample), "platform"],
     )
