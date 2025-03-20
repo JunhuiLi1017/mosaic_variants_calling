@@ -60,8 +60,8 @@ def get_multiqc_input(wildcards):
         GROUP = ["R1"]
     fastqc_files = expand(
         [
-            "{outpath}/01_multiqc/fastqc/{sample}.{group}_fastqc.html",
-            "{outpath}/01_multiqc/fastqc/{sample}.{group}_fastqc.zip"
+            f"{outpath}/01_multiqc/fastqc/{sample}.{group}_fastqc.html",
+            f"{outpath}/01_multiqc/fastqc/{sample}.{group}_fastqc.zip"
         ],
         sample=[u.sample for u in units.itertuples()],
         group=GROUP

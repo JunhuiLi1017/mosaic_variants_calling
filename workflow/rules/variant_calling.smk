@@ -21,6 +21,8 @@ rule Mutect2:
 		sample="{sample}",
 		interval_list=intervals_dir + "/{individual_chr}.intervals.list",
 		gatk=config['gatk_current_using']
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		java -Xms10g -XX:ParallelGCThreads={threads} -jar {params.gatk} Mutect2 -R {params.ref} -I {input} --pon {params.pon} -tumor {params.sample} --germline-resource {params.af_only_gnomad} -L {params.interval_list} --interval-padding 100 -O {output.raw_vcf} > {log} 2>&1
@@ -39,6 +41,10 @@ rule vcf_args:
 		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.args"
 	log:
 		"{outpath}/03_variants/logs/{sample}.args.logs"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		ls {input} > {output}
@@ -59,6 +65,10 @@ rule vcf_concat:
 		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz"
 	log:
 		"{outpath}/03_variants/logs/{sample}.concat.log"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		vcf-concat -f {input}  |  bgzip > {output}
@@ -74,6 +84,10 @@ rule vcf_index:
 		"{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz"
 	output:
 		protected("{outpath}/03_variants/mutect2/result/{sample}/{sample}.mt2pon.vcf.gz.tbi")
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		tabix -p vcf {input}
@@ -90,6 +104,10 @@ rule merge_mutectstats:
 		gatk=config['gatk_current_using']
 	log:
 		"{outpath}/03_variants/logs/{sample}.MergeMutectStats.log"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		java -Xms10g -XX:ParallelGCThreads={threads} -jar {params.gatk} MergeMutectStats {params.list_para} -O {output} > {log} 2>&1
@@ -109,6 +127,8 @@ rule FilterMutectCall:
 	params:
 		ref=config['reference'],
 		gatk=config['gatk_current_using']
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		java -Xms10g -XX:ParallelGCThreads={threads} -jar {params.gatk} FilterMutectCalls -R {params.ref} -V {input.vcf} -O {output} > {log} 2>&1
@@ -122,6 +142,10 @@ rule MT2_initial_filter:
 	params:
 		sample="{sample}",
 		af_threshold="0.03" if config["pcr_based"] == True else "0.02"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat <(zcat {input.vcf} | grep -v "^#"| grep PASS | gawk '{{match($0,/;POPAF=(([0-9]+\.[0-9]+));/,arr); if(arr[1]!~/-/ && arr[1]>=4){{print $0}}}}' | cut -f1,2,4,5,10 | sed "s/:/\\t/g" | sed "s/,/\\t/g" | awk '$8>=0.03 && $8<0.4' | grep -v '0|1' | grep -v '1|0') <(zcat {input.vcf} | grep -v "^#" | grep PASS | gawk '{{match($0,/;POPAF=(([0-9]+\.[0-9]+));/,arr); if(arr[1]!~/-/ && arr[1]>=4){{print $0}}}}' | cut -f1,2,4,5,10 | sed "s/:/\\t/g" | sed "s/,/\\t/g" | awk '$8>={params.af_threshold} && $8<0.4 ' | grep -E "0\|1|1\|0") | cut -f 1-4,6-8 | awk '{{OFS="\\t";print $1,$2-1,$2,$3,$4,\"{params.sample}\",$5,$6,$7}}' > {output}
@@ -134,6 +158,10 @@ rule repeat_filter:
 		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.noSegDup.bed"
 	params:
 		segdup=config['SegDup_and_clustered']
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		subtractBed -a {input.mt2pon} -b {params.segdup} > {output}
@@ -144,6 +172,10 @@ rule annovar_formatter:
 		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.noSegDup.bed"
 	output:
 		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.ANNOVAR.list"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat {input} | awk '{{OFS="\\t\";len=length($4)-length($5);if(len<=0){{print $1,$3,$3,$4,$5,$6}}if(len>0){{print $1,$3,$3+len,$4,$5,$6}}}}'> {output}
@@ -155,6 +187,10 @@ rule MAF0_extraction_SNV:
 		file1="{outpath}/03_variants/mutect2/filter/{sample}/{sample}.mt2pon.AF0.02.ANNOVAR.list"
 	output:
 		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.SNV.chr.bed"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		"cat {input.file1}|awk '\''{{OFS=\"\\t\";print $1,$2-1,$2,$4,$5,$6}}'\'' | awk '\''length($4)==1 && length($5)==1'\'' |awk 'BEGIN{{OFS=\"\\t\"}} $1=\"chr\"$1' > {output}"
 
@@ -166,6 +202,10 @@ rule MAF0_extraction_INS:
 		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.INS.chr.bed"
 	params:
 		allrepeats_forindel=config['allrepeats_forindel']
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		"subtractBed -a <(cat {input.file1}|awk '\''{{OFS=\"\\t\";print $1,$2-1,$2,$4,$5,$6}}'\'' |awk '\''length($4)< length($5)'\'') -b {params.allrepeats_forindel} | awk 'BEGIN{{OFS=\"\\t\"}} $1=\"chr\"$1' > {output}"
 
@@ -176,6 +216,10 @@ rule MAF0_extraction_DEL:
 		"{outpath}/03_variants/mutect2/filter/{sample}/{sample}.MAF0.DEL.chr.bed"
 	params:
 		allrepeats_forindel=config['allrepeats_forindel']
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		"subtractBed -a <(cat {input.file1}|awk '\''{{OFS=\"\\t\";print $1,$2-1,$2,$4,$5,$6}}'\'' | awk '\''length($4)> length($5)'\'') -b {params.allrepeats_forindel} | awk 'BEGIN{{OFS=\"\\t\"}} $1=\"chr\"$1' > {output}"
 
@@ -188,11 +232,15 @@ rule rename_bam:
 		bai="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/{sample}.bai"
 	params:
 		lndir="{outpath}/02_map/bqsr/{sample}/sort.rmdup.bqsr/"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
-			mkdir -p {params.lndir}
-			ln -s {input.bam} {output.bam}
-			ln -s {input.bai} {output.bai}
+		mkdir -p {params.lndir}
+		ln -s {input.bam} {output.bam}
+		ln -s {input.bai} {output.bai}
 		'''
 
 rule feature_extraction_SNV:
@@ -207,6 +255,10 @@ rule feature_extraction_SNV:
 		ref=config['reference']
 	log:
 		"{outpath}/03_variants/logs/{sample}.SNV.features.log"
+	threads:
+		1
+	resources:
+		mem_mb=8000
 	shell:
 		'''
 		source ~/anaconda3/etc/profile.d/conda.sh && conda activate py3.7.1 
@@ -227,6 +279,10 @@ rule feature_extraction_INS:
 		ref=config['reference']
 	log:
 		"{outpath}/03_variants/logs/{sample}.INS.features.log"
+	threads:
+		1
+	resources:
+		mem_mb=8000
 	shell:
 		'''
 		source ~/anaconda3/etc/profile.d/conda.sh && conda activate py3.7.1 
@@ -247,6 +303,10 @@ rule feature_extraction_DEL:
 		ref=config['reference']
 	log:
 		"{outpath}/03_variants/logs/{sample}.DEL.features.log"
+	threads:
+		1
+	resources:
+		mem_mb=8000
 	shell:
 		'''
 		source ~/anaconda3/etc/profile.d/conda.sh && conda activate py3.7.1 
@@ -262,6 +322,10 @@ rule g1000_avail_acess_filter_SNV:
 		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.SNV.no1000g.features"
 	params:
 		avail_acess_1000g=config['avail_acess_1000g']
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat <(head -n 1 {input}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input} | cut -f 2-3) {input}) | cut -f 3-) > {output}
@@ -274,6 +338,10 @@ rule g1000_avail_acess_filter_INS:
 		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.INS.no1000g.features"
 	params:
 		avail_acess_1000g=config['avail_acess_1000g']
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat <(head -n 1 {input.feature}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input.feature} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input.feature} | cut -f 2-3) {input.feature}) | cut -f 3-) > {output}
@@ -286,6 +354,10 @@ rule g1000_avail_acess_filter_DEL:
 		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.DEL.no1000g.features"
 	params:
 		avail_acess_1000g=config['avail_acess_1000g']
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat <(head -n 1 {input.feature}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input.feature} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input.feature} | cut -f 2-3) {input.feature}) | cut -f 3-) > {output}
@@ -298,6 +370,10 @@ rule Prediction_SNV:
 		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.predictions"
 	params:
 		refine_beta=config['refine_beta']
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		Rscript /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/Prediction.R {input.file1} {params.refine_beta} Refine {output}
@@ -310,6 +386,10 @@ rule Prediction_INS:
 		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.predictions"
 	params:
 		refine_beta="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/insertions_250x.RF.rds"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		Rscript /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/Prediction.R {input.file1} {params.refine_beta} Refine {output}
@@ -322,6 +402,10 @@ rule Prediction_DEL:
 		"{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.predictions"
 	params:
 		refine_beta="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/insertions_250x.RF.rds"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		Rscript /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/Prediction.R {input.file1} {params.refine_beta} Refine {output}
@@ -336,6 +420,10 @@ rule Annotation_SNV_Mosaic:
 	params:
 		outdir="{outpath}/03_variants/mutect2/feature/{sample}",
 		outputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.annoSNV"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		grep "mosaic" {input.file1} | cut -f 1,35 | awk 'BEGIN {{ FS = "~" }} ; {{ print $2"\\t"$3"\\t"$3"\\t"$4"\\t"$5"\\t"$6 }}' | tail -n +2 | awk '$6=="mosaic" {{print $0}}' > {output.inputanno}
@@ -352,6 +440,10 @@ rule Annotation_INS_Mosaic:
 	params:
 		outdir="{outpath}/03_variants/mutect2/feature/{sample}",
 		outputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.ouput.predictions"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		#Rscript /home/junhui.li11-umw/Pipeline/MosaicPipeline/mosaic_bin/choooseMosaicVar.R -i {input.file1} -o {output.mosaic} -t {output.inputanno}
@@ -370,6 +462,10 @@ rule Annotation_DEL_Mosaic:
 	params:
 		outdir="{outpath}/03_variants/mutect2/feature/{sample}",
 		outputanno="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.ouput.predictions"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		grep "hap=3" {input.file1} > {output.mosaic}
@@ -386,6 +482,10 @@ rule extrac_SNVsubvcf:
 		tmp="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.vcf.tmp",
 		bed="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.subvcf.bed",
 		dpaf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.SNV.{ref_version}.Geno.DP.AF.txt"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		awk '$6=="mosaic"{{print $0}}' {input.inputanno} | awk 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$2}}' | sort -k1,1 -k2,2n > {output.bed}
@@ -403,6 +503,10 @@ rule extrac_INSsubvcf:
 		tmp="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.sub.vcf.tmp",
 		bed="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.subvcf.bed",
 		dpaf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.INS.{ref_version}.Geno.DP.AF.txt"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat {input.inputanno} | awk 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$2}}' | sort -k1,1 -k2,2n > {output.bed}
@@ -420,6 +524,10 @@ rule extrac_DELsubvcf:
 		tmp="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.sub.vcf.tmp",
 		bed="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.subvcf.bed",
 		dpaf="{outpath}/03_variants/mutect2/feature/{sample}/{sample}.{cov}.DEL.{ref_version}.Geno.DP.AF.txt"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat {input.inputanno} | awk 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$2}}' | sort -k1,1 -k2,2n > {output.bed}
@@ -437,6 +545,10 @@ rule gnomAD_vcf_tier2_3_subchr:
 	params:
 		gnomad_2_1_1_0_001="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/sub_chr/{ref_version}_gnomad211_exome_genome_afpop_gt_0.001_chr_snponly_{individual_chr}.txt",
 		gnomad_2_1_1_0="/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/sub_chr/{ref_version}_gnomad211_exome_genome_afpop_gt_0_le_0.001_chr_snponly_{individual_chr}.txt"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		awk 'NR==FNR{{c[$1,$2,$4,$5]=$0}}NR!=FNR{{if(c[$1,$2,$4,$5]) {{print $0}}}}' {params.gnomad_2_1_1_0_001} {input.vcf} > {output.vcf_tier3}
@@ -450,6 +562,10 @@ rule gather_gnomAD_vcf_tier2_3:
 	output:
 		vcf_tier3="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier3.vcf",
 		vcf_tier2="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier2.vcf"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat {input.vcf_tier3} > {output.vcf_tier3}
@@ -463,6 +579,10 @@ rule gnomAD_vcf_tier1:
 		vcf_tier2="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier2.vcf"
 	output:
 		vcf_tier1="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier1.vcf"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		awk 'NR==FNR{{c[$1,$2,$4,$5]=$0}}NR!=FNR{{if(!c[$1,$2,$4,$5]) {{print $0}}}}' <(cat {input.vcf_tier2} {input.vcf_tier3}) {input.vcf} > {output.vcf_tier1}
@@ -476,6 +596,10 @@ rule mark_tier123:
 		vcf_tier1="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier1.vcf"
 	output:
 		tier_anno="{outpath}/03_variants/mutect2/tier/{sample}/{sample}.{cov}.SNV.tier.{ref_version}_multianno.txt"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		cat <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier1\t"$0}}}}' {input.vcf_tier1} {input.anno}) <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier2\t"$0}}}}' {input.vcf_tier2} {input.anno}) <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier3\t"$0}}}}' {input.vcf_tier3} {input.anno}) > {output.tier_anno}
@@ -492,6 +616,10 @@ rule summary:
 		snv="{outpath}/{sample}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt",
 		ins="{outpath}/{sample}.{cov}.INS.{ref_version}.mosaic_summary.txt",
 		del1="{outpath}/{sample}.{cov}.DEL.{ref_version}.mosaic_summary.txt"
+	threads:
+		1
+	resources:
+		mem_mb=1000
 	shell:
 		'''
 		wc -l {input.snv} > {output.snv}
