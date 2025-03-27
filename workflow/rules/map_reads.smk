@@ -24,7 +24,8 @@ rule map_raw_sort:
         "{outpath}/02_map/bwa/{sample}/{sample}.raw.bam"
     output:
         sort_bam="{outpath}/02_map/bwa/{sample}/{sample}.sort.bam",
-        sort_stat="{outpath}/02_map/bwa/{sample}/{sample}.sort.stat"
+        sort_stat="{outpath}/02_map/bwa/{sample}/{sample}.sort.stat",
+        sort_index="{outpath}/02_map/bwa/{sample}/{sample}.sort.bam.bai"
     log:
         "{outpath}/02_map/logs/{sample}.raw.sort.log"
     params:
@@ -48,7 +49,8 @@ rule map_raw_sort:
 
 rule remove_dup:
     input:
-        "{outpath}/02_map/bwa/{sample}/{sample}.sort.bam"
+        "{outpath}/02_map/bwa/{sample}/{sample}.sort.bam",
+        "{outpath}/02_map/bwa/{sample}/{sample}.sort.bam.bai"
     output:
         o1=temp("{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.bam"),
         o2="{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.matrix"
@@ -57,13 +59,13 @@ rule remove_dup:
     threads:
         8
     resources:
-        mem_mb=2000
+        mem_mb=3000
     params:
         dedup="--REMOVE_DUPLICATES true" if config["pcr_based"] == True else "--REMOVE_DUPLICATES false --REMOVE_SEQUENCING_DUPLICATES true --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500",
         tmpdir="{outpath}/02_map/dup/{sample}/tmpdir_{sample}"
     shell:
         """
-        mkdir -p {params.tmpdir} && picard -Xms10g MarkDuplicates --TMP_DIR {params.tmpdir} --INPUT {input} --METRICS_FILE {output.o2} --OUTPUT {output.o1} {params.dedup} && samtools index {output.o1} > {log} 2>&1
+        mkdir -p {params.tmpdir} && picard -Xms20g MarkDuplicates --TMP_DIR {params.tmpdir} --INPUT {input[0]} --METRICS_FILE {output.o2} --OUTPUT {output.o1} {params.dedup} && samtools index {output.o1} > {log} 2>&1
         """
 
 rule BaseRecalibrator:
@@ -85,7 +87,7 @@ rule BaseRecalibrator:
         mem_mb=2000
     shell:
         """
-        java -Xms10g -XX:ParallelGCThreads={threads} -jar {params.gatk} BaseRecalibrator -I {input} -O {output.o1} -R {params.ref} --known-sites {params.dpsnp138} --known-sites {params.known_indels} --known-sites {params.Mills_and_1000G} > {log} 2>&1
+        java -Xms12g -XX:ParallelGCThreads={threads} -jar {params.gatk} BaseRecalibrator -I {input} -O {output.o1} -R {params.ref} --known-sites {params.dpsnp138} --known-sites {params.known_indels} --known-sites {params.Mills_and_1000G} > {log} 2>&1
         """
 
 rule ApplyBQSR:
@@ -107,6 +109,6 @@ rule ApplyBQSR:
         mem_mb=2000
     shell:
         """
-        java -Xms10g -XX:ParallelGCThreads={threads} -jar {params.gatk} ApplyBQSR -I {input.i1} -O {output.o1} -R {params.ref} --bqsr-recal-file {input.i2} > {log} 2>&1
+        java -Xms12g -XX:ParallelGCThreads={threads} -jar {params.gatk} ApplyBQSR -I {input.i1} -O {output.o1} -R {params.ref} --bqsr-recal-file {input.i2} > {log} 2>&1
         samtools flagstat {output.o1} > {params.prefix}.txt
         """

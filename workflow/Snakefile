@@ -5,7 +5,7 @@ include: "rules/variant_calling.smk"
 
 rule all:
     input:
-        expand("{outpath}/01_multiqc/multiqc_report.html", outpath=outpath)
+        #expand("{outpath}/01_multiqc/multiqc_report.html", outpath=outpath)
         expand("{outpath}/{sample}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt", outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
         expand("{outpath}/{sample}.{cov}.INS.{ref_version}.mosaic_summary.txt", outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
         expand("{outpath}/{sample}.{cov}.DEL.{ref_version}.mosaic_summary.txt", outpath=outpath, sample=sample, cov=cov, ref_version=ref_version)

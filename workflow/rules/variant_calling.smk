@@ -325,7 +325,7 @@ rule g1000_avail_acess_filter_SNV:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		cat <(head -n 1 {input}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input} | cut -f 2-3) {input}) | cut -f 3-) > {output}
@@ -341,7 +341,7 @@ rule g1000_avail_acess_filter_INS:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		cat <(head -n 1 {input.feature}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input.feature} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input.feature} | cut -f 2-3) {input.feature}) | cut -f 3-) > {output}
@@ -357,7 +357,7 @@ rule g1000_avail_acess_filter_DEL:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		cat <(head -n 1 {input.feature}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input.feature} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input.feature} | cut -f 2-3) {input.feature}) | cut -f 3-) > {output}
@@ -373,7 +373,7 @@ rule Prediction_SNV:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		Rscript /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/Prediction.R {input.file1} {params.refine_beta} Refine {output}
@@ -389,7 +389,7 @@ rule Prediction_INS:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		Rscript /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/Prediction.R {input.file1} {params.refine_beta} Refine {output}
@@ -405,7 +405,7 @@ rule Prediction_DEL:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		Rscript /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/Prediction.R {input.file1} {params.refine_beta} Refine {output}
@@ -423,7 +423,7 @@ rule Annotation_SNV_Mosaic:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=4000
 	shell:
 		'''
 		grep "mosaic" {input.file1} | cut -f 1,35 | awk 'BEGIN {{ FS = "~" }} ; {{ print $2"\\t"$3"\\t"$3"\\t"$4"\\t"$5"\\t"$6 }}' | tail -n +2 | awk '$6=="mosaic" {{print $0}}' > {output.inputanno}
@@ -548,7 +548,7 @@ rule gnomAD_vcf_tier2_3_subchr:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		awk 'NR==FNR{{c[$1,$2,$4,$5]=$0}}NR!=FNR{{if(c[$1,$2,$4,$5]) {{print $0}}}}' {params.gnomad_2_1_1_0_001} {input.vcf} > {output.vcf_tier3}
@@ -565,7 +565,7 @@ rule gather_gnomAD_vcf_tier2_3:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		cat {input.vcf_tier3} > {output.vcf_tier3}
@@ -582,7 +582,7 @@ rule gnomAD_vcf_tier1:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		awk 'NR==FNR{{c[$1,$2,$4,$5]=$0}}NR!=FNR{{if(!c[$1,$2,$4,$5]) {{print $0}}}}' <(cat {input.vcf_tier2} {input.vcf_tier3}) {input.vcf} > {output.vcf_tier1}
@@ -599,7 +599,7 @@ rule mark_tier123:
 	threads:
 		1
 	resources:
-		mem_mb=1000
+		mem_mb=8000
 	shell:
 		'''
 		cat <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier1\t"$0}}}}' {input.vcf_tier1} {input.anno}) <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier2\t"$0}}}}' {input.vcf_tier2} {input.anno}) <(awk 'BEGIN{{OFS="\t"}}NR==FNR{{c[$1,$2,$4,$5]=$0}} NR!=FNR{{if (c[$1,$2,$4,$5]) {{print "tier3\t"$0}}}}' {input.vcf_tier3} {input.anno}) > {output.tier_anno}
