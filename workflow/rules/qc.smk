@@ -2,62 +2,72 @@ rule fastp:
     input:
         unpack(get_fastq)
     output:
-        temp(["{outpath}/01_multiqc/fastp/{sample}/{sample}.R1.fastq.gz", "{outpath}/01_multiqc/fastp/{sample}/{sample}.R2.fastq.gz"]) if paired_end else temp("{outpath}/01_multiqc/fastp/{sample}/{sample}.R1.fastq.gz"),
-        j="{outpath}/01_multiqc/fastp/{sample}/{sample}.json", 
-        h="{outpath}/01_multiqc/fastp/{sample}/{sample}.html"
+        r1=temp(f"{outpath}/01_multiqc/fastp/{{sample}}_{{library}}_{{flowlane}}.R1.fastq.gz"),
+        r2=temp(f"{outpath}/01_multiqc/fastp/{{sample}}_{{library}}_{{flowlane}}.R2.fastq.gz") if paired_end else [],
+        j=f"{outpath}/01_multiqc/fastp/{{sample}}_{{library}}_{{flowlane}}.json",
+        h=f"{outpath}/01_multiqc/fastp/{{sample}}_{{library}}_{{flowlane}}.html"
     log:
-        "{outpath}/01_multiqc/logs/{sample}.fastp.log"
+        f"{outpath}/logs/fastp/{{sample}}_{{library}}_{{flowlane}}.log"
     params:
-        trim_expr= "" if config['trim'] == False else f"-f {trim_value} -F {trim_value}",
+        trim_expr=f"-f {config['trim_value_f']} -F {config['trim_value_F']}" if config.get('trim_f') and config.get('trim_F') else f"-f {config['trim_value_f']}" if config.get('trim_f') else f"-F {config['trim_value_F']}" if config.get('trim_F') else "",
         in_r2=lambda wildcards, input: f"-I {input.r2}" if paired_end else "",
-        out_r2=lambda wildcards, output: f"-O {output[1]}" if paired_end else ""
-    threads: 4  # Increased to leverage fastp multi-threading
+        out_r2=lambda wildcards, output: f"-O {output.r2}" if paired_end else ""
+    message: "fastp quality control"
+    threads: 4
     resources:
-        mem_mb=1500
+        mem_mb=3000
     shell:
         """
         fastp {params.trim_expr} \
             -i {input.r1} \
             {params.in_r2} \
-            -o {output[0]} \
+            -o {output.r1} \
             {params.out_r2} \
             -j {output.j} -h {output.h} \
             --thread {threads} \
             > {log} 2>&1
         """
 
+
 rule fastqc:
     input:
-        get_clean_fastq
+        get_fastp_fastq
     output:
-        ["{outpath}/01_multiqc/fastqc/{sample}.R1_fastqc.html", "{outpath}/01_multiqc/fastqc/{sample}.R2_fastqc.html"] if paired_end else "{outpath}/01_multiqc/fastqc/{sample}.R1_fastqc.html",
-        ["{outpath}/01_multiqc/fastqc/{sample}.R1_fastqc.zip", "{outpath}/01_multiqc/fastqc/{sample}.R2_fastqc.zip"] if paired_end else "{outpath}/01_multiqc/fastqc/{sample}.R1_fastqc.zip"
+        ["{outpath}/01_multiqc/fastqc/{sample}_{library}_{flowlane}.R1_fastqc.html", "{outpath}/01_multiqc/fastqc/{sample}_{library}_{flowlane}.R2_fastqc.html"] if paired_end else "{outpath}/01_multiqc/fastqc/{sample}_{library}_{flowlane}.R1_fastqc.html",
+        ["{outpath}/01_multiqc/fastqc/{sample}_{library}_{flowlane}.R1_fastqc.zip", "{outpath}/01_multiqc/fastqc/{sample}_{library}_{flowlane}.R2_fastqc.zip"] if paired_end else "{outpath}/01_multiqc/fastqc/{sample}_{library}_{flowlane}.R1_fastqc.zip"
     conda:
         "../envs/multiqc_env.yaml"
     log:
-        "{outpath}/01_multiqc/logs/{sample}.fastqc.log"
-    params:
-        out_fastqc="{outpath}/01_multiqc/fastqc/{sample}"
+        "{outpath}/logs/fastqc/{sample}_{library}_{flowlane}.log"
+    threads: 2
     resources:
-        mem_mb=1000
+        mem_mb=750
     shell:
-        "fastqc -o {params.out_fastqc} {input} > {log} 2>&1"
+        "fastqc -o {outpath}/01_multiqc/fastqc {input} > {log} 2>&1"
+
+rule samtools_stats:
+    input:
+        "{outpath}/02_map/bqsr/{sample}.sort.rmdup.bqsr.bam"
+    output:
+        "{outpath}/02_map/bqsr_stat/{sample}.sort.rmdup.bqsr.stat"
+    log:
+         "{outpath}/logs/bwa/{sample}.bqsr.stat.log"
+    shell:
+        "samtools stats {input} > {output}"
 
 rule multiqc:
     input:
         get_multiqc_input
     output:
         "{outpath}/01_multiqc/multiqc_report.html"
-    params:
-        outdir="{outpath}/01_multiqc",
-        indir="{outpath}/01_multiqc/fastqc"
     conda:
         "../envs/multiqc_env.yaml"
     log:
-        "{outpath}/01_multiqc/logs/multiqc.log"
+        "{outpath}/logs/multiqc/multiqc.log"
+    threads: 2
     resources:
-        mem_mb=1000
+        mem_mb=750
     shell:
         """
-        multiqc -o {params.outdir} {params.indir} --force
+        multiqc -o {outpath}/01_multiqc {outpath}/01_multiqc/fastqc --force
         """

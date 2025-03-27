@@ -5,9 +5,12 @@ properties:
   sample:
     type: string
     description: sample name/id the unit has been sequenced from
-  unit:
+  library:
     type: string
-    description: unit id
+    description: library prep id
+  flowlane:
+    type: string
+    description: flowcell and line id
   platform:
     type: string
     enum: ["CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "ONT", "PACBIO"]
@@ -19,6 +22,7 @@ properties:
     description: path to second FASTQ file (leave empty in case of single-end)
 required:
   - sample
-  - unit
+  - library
+  - flowlane
   - platform
   - fq1
