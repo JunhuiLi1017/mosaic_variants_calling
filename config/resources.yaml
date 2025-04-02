@@ -1,0 +1,13 @@
+resource:
+  low:
+    mem_mb: 1000
+    threads: 2
+  medium:
+    mem_mb: 2000
+    threads: 4
+  high:
+    mem_mb: 3000
+    threads: 8
+  very_high:
+    mem_mb: 4000
+    threads: 12

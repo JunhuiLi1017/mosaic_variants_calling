@@ -28,7 +28,6 @@ rule Mutect2:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		'''
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} Mutect2 \
 		-R {params.ref} \
@@ -39,7 +38,6 @@ rule Mutect2:
 		-L {params.interval_list} \
 		--interval-padding 100 \
 		-O {output.raw_vcf} > {log} 2>&1
-		conda deactivate
 		'''
 
 rule vcf_merge:
@@ -87,10 +85,7 @@ rule merge_mutectstats:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		'''
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
-		java -Xms1g -XX:ParallelGCThreads={threads} -jar {params.gatk} \
-		MergeMutectStats {params.list_para} -O {output} > {log} 2>&1
-		conda deactivate
+		java -Xms1g -XX:ParallelGCThreads={threads} -jar {params.gatk} MergeMutectStats {params.list_para} -O {output} > {log} 2>&1
 		'''
 
 rule FilterMutectCall:
@@ -114,10 +109,7 @@ rule FilterMutectCall:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		'''
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
-		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} -jar {params.gatk} \
-		FilterMutectCalls -R {params.ref} -V {input.vcf} -O {output} > {log} 2>&1
-		conda deactivate
+		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} -jar {params.gatk} FilterMutectCalls -R {params.ref} -V {input.vcf} -O {output} > {log} 2>&1
 		'''
 
 rule MT2_initial_filter:

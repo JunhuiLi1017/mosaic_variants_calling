@@ -70,12 +70,10 @@ rule map_reads_frag:
 		"../envs/deeptools.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate deeptools
 		bamPEFragmentSize -b {input.i1} \
 		-o {output.o1} \
 		--maxFragmentLength 2000 \
 		--table {output.o2} > {log} 2>&1
-		conda deactivate
 		""" 
 
 rule remove_dup:
@@ -95,7 +93,7 @@ rule remove_dup:
 		tmpdir="{outpath}/02_map/dup/{sample}/tmpdir_{sample}",
 		input_args=lambda wildcards, input: " ".join(f"--INPUT {bam}" for bam in input),
 		gatk=config['gatk_current_using'],
-		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
 		resource['resource']['very_high']['threads']
 	resources:
@@ -104,7 +102,6 @@ rule remove_dup:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		mkdir -p {params.tmpdir}
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} -jar {params.gatk} \
 		MarkDuplicates {params.input_args} \
@@ -113,7 +110,6 @@ rule remove_dup:
 		{params.dedup} \
 		--TMP_DIR {params.tmpdir} \
 		--CREATE_INDEX true > {log} 2>&1
-		conda deactivate
 		"""
 
 rule BaseRecalibrator:
@@ -129,7 +125,7 @@ rule BaseRecalibrator:
 		dpsnp138=config['dpsnp138'],
 		known_indels=config['known_indels'],
 		Mills_and_1000G=config['Mills_and_1000G'],
-		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
 		resource['resource']['very_high']['threads']
 	resources:
@@ -138,7 +134,6 @@ rule BaseRecalibrator:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} BaseRecalibrator \
 		-I {input} \
@@ -147,7 +142,6 @@ rule BaseRecalibrator:
 		--known-sites {params.dpsnp138} \
 		--known-sites {params.known_indels} \
 		--known-sites {params.Mills_and_1000G} > {log} 2>&1
-		conda deactivate
 		"""
 
 rule ApplyBQSR:
@@ -163,7 +157,7 @@ rule ApplyBQSR:
 		ref=config['reference'],
 		gatk=config['gatk_current_using'],
 		prefix="{outpath}/02_map/bqsr/{sample}/{sample}",
-		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
 		resource['resource']['very_high']['threads']
 	resources:
@@ -172,7 +166,6 @@ rule ApplyBQSR:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} ApplyBQSR \
 		-I {input.i1} \
@@ -180,5 +173,4 @@ rule ApplyBQSR:
 		-R {params.ref} \
 		--bqsr-recal-file {input.i2} > {log} 2>&1
 		samtools flagstat {output.o1} > {params.prefix}.txt
-		conda deactivate
 		"""
