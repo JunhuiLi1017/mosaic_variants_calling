@@ -6,9 +6,9 @@ rule map_reads:
 	log:
 		"{outpath}/logs/bwa/{sample}/{sample}.{library}.{flowlane}.bwa.log"
 	threads:
-		resource['resource']['very_high']['threads']
+		resource['resource']['huge']['threads']
 	resources:
-		mem_mb=resource['resource']['very_high']['mem_mb']
+		mem_mb=resource['resource']['huge']['mem_mb']
 	params:
 		rg=get_reads_group,
 		ref=config['reference']
@@ -17,6 +17,7 @@ rule map_reads:
 	shell:
 		"""
 		bwa mem -t {threads} \
+		-K 500000000 \
 		-M {params.rg} \
 		{params.ref} \
 		{input[0]} \
@@ -33,12 +34,12 @@ rule map_reads_sort:
 	log:
 		"{outpath}/logs/bwa/{sample}/{sample}.{library}.{flowlane}.bwa.sort.log"
 	threads:
-		resource['resource']['very_high']['threads']
+		resource['resource']['huge']['threads']
 	resources:
-		mem_mb=resource['resource']['very_high']['mem_mb']
+		mem_mb=resource['resource']['huge']['mem_mb']
 	params:
 		tmpdir="{outpath}/02_map/bwa/sort/{sample}/tmpdir_{sample}",
-		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000) // threads
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000) // threads
 	conda:
 		"../envs/sambamba1.0.1.yaml"
 	shell:
@@ -95,11 +96,12 @@ rule remove_dup:
 		tmpdir="{outpath}/02_map/dup/{sample}/tmpdir_{sample}",
 		input_args=lambda wildcards, input: " ".join(f"--INPUT {bam}" for bam in input),
 		gatk=config['gatk_current_using'],
-		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 8000)
 	threads:
 		resource['resource']['very_high']['threads']
 	resources:
-		mem_mb=resource['resource']['very_high']['mem_mb']
+		#mem_mb=resource['resource']['very_high']['mem_mb']
+		mem_mb=5000
 	conda:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
@@ -129,7 +131,7 @@ rule BaseRecalibrator:
 		dpsnp138=config['dpsnp138'],
 		known_indels=config['known_indels'],
 		Mills_and_1000G=config['Mills_and_1000G'],
-		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
 	threads:
 		resource['resource']['very_high']['threads']
 	resources:
@@ -163,7 +165,7 @@ rule ApplyBQSR:
 		ref=config['reference'],
 		gatk=config['gatk_current_using'],
 		prefix="{outpath}/02_map/bqsr/{sample}/{sample}",
-		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
 	threads:
 		resource['resource']['very_high']['threads']
 	resources:
