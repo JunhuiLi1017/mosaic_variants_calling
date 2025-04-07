@@ -120,22 +120,23 @@ rule remove_dup:
 
 rule BaseRecalibrator:
 	input:
-		"{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.bam"
+		bam="{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.bam"
 	output:
-		o1="{outpath}/02_map/bqsr/{sample}/{sample}.recal_data.table"
+		o1="{outpath}/02_map/bqsr/{sample}/sub_recal/{sample}.{individual_chr}.recal_data.table"
 	log:
-		"{outpath}/02_map/logs/{sample}/{sample}.BQSR.log"
+		"{outpath}/02_map/logs/{sample}/{sample}.{individual_chr}.recal.log"
 	params:
 		gatk=config['gatk_current_using'],
 		ref=config['reference'],
 		dpsnp138=config['dpsnp138'],
 		known_indels=config['known_indels'],
 		Mills_and_1000G=config['Mills_and_1000G'],
+		interval_list=intervals_dir + "/{individual_chr}.intervals.list",
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
 	threads:
-		resource['resource']['very_high']['threads']
+		resource['resource']['high']['threads']
 	resources:
-		mem_mb=resource['resource']['very_high']['mem_mb']
+		mem_mb=resource['resource']['high']['mem_mb']
 	conda:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
@@ -146,30 +147,58 @@ rule BaseRecalibrator:
 		-I {input} \
 		-O {output.o1} \
 		-R {params.ref} \
+		-L {params.interval_list} \
 		--known-sites {params.dpsnp138} \
 		--known-sites {params.known_indels} \
 		--known-sites {params.Mills_and_1000G} > {log} 2>&1
 		conda deactivate
 		"""
 
+rule GatherBQSRreports:
+	input:
+		sub_reports = lambda wildcards: [f"{wildcards.outpath}/02_map/bqsr/{wildcards.sample}/sub_recal/{wildcards.sample}.{chr}.recal_data.table" for chr in chromosomes]
+	output:
+		report = "{outpath}/02_map/bqsr/{sample}/{sample}.recal_data.table" 
+	log:
+		"{outpath}/02_map/logs/{sample}/{sample}.GatherBQSRreports.log"
+	params:
+		gatk=config['gatk_current_using'],
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
+	threads:
+		resource['resource']['medium']['threads']
+	resources:
+		mem_mb=resource['resource']['medium']['mem_mb']
+	conda:
+		"../envs/gatk4.6.1.0.yaml"
+	shell:
+		"""
+		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
+		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
+		-jar {params.gatk} GatherBQSRReports \
+		-I {input.sub_reports} \
+		-O {output.report} > {log} 2>&1
+		conda deactivate
+		"""
+
 rule ApplyBQSR:
 	input:
-		i1="{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.bam",
-		i2="{outpath}/02_map/bqsr/{sample}/{sample}.recal_data.table"
+		bam="{outpath}/02_map/dup/{sample}/{sample}.sort.rmdup.bam",
+		recal_table="{outpath}/02_map/bqsr/{sample}/{sample}.recal_data.table"
 	output:
-		o1="{outpath}/02_map/bqsr/{sample}/{sample}.bam",
-		o2="{outpath}/02_map/bqsr/{sample}/{sample}.bai"
+		bam=temp("{outpath}/02_map/bqsr/{sample}/sub_bqsr/{sample}.{individual_chr}.bam"),
+		bai=temp("{outpath}/02_map/bqsr/{sample}/sub_bqsr/{sample}.{individual_chr}.bai")
 	log:
-		"{outpath}/02_map/logs/{sample}.applyBQSR.log"
+		"{outpath}/02_map/logs/{sample}.{individual_chr}.applyBQSR.log"
 	params:
 		ref=config['reference'],
 		gatk=config['gatk_current_using'],
-		prefix="{outpath}/02_map/bqsr/{sample}/{sample}",
+		interval_list=intervals_dir + "/{individual_chr}.intervals.list",
+		prefix="{outpath}/02_map/bqsr/{sample}/sub_bqsr/{sample}.{individual_chr}",
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
 	threads:
-		resource['resource']['very_high']['threads']
+		resource['resource']['high']['threads']
 	resources:
-		mem_mb=resource['resource']['very_high']['mem_mb']
+		mem_mb=resource['resource']['high']['mem_mb']
 	conda:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
@@ -177,10 +206,42 @@ rule ApplyBQSR:
 		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} ApplyBQSR \
-		-I {input.i1} \
-		-O {output.o1} \
+		-I {input.bam} \
+		-O {output.bam} \
 		-R {params.ref} \
-		--bqsr-recal-file {input.i2} > {log} 2>&1
-		samtools flagstat {output.o1} > {params.prefix}.txt
+		-L {params.interval_list} \
+		--bqsr-recal-file {input.recal_table} > {log} 2>&1
+		samtools stat {output.bam} > {params.prefix}.txt
+		conda deactivate
+		"""
+
+
+rule GatherBQSRBam:
+	input:
+		bam=lambda wildcards: [f"{wildcards.outpath}/02_map/bqsr/{wildcards.sample}/sub_bqsr/{wildcards.sample}.{chr}.bam" for chr in chromosomes]
+	output:
+		bam="{outpath}/02_map/bqsr/{sample}/{sample}.bam",
+		bai="{outpath}/02_map/bqsr/{sample}/{sample}.bai"
+	log:
+		"{outpath}/02_map/logs/{sample}.gatherbqsrbam.log"
+	params:
+		gatk=config['gatk_current_using'],
+		input_args=lambda wildcards, input: " ".join(f"--INPUT {bam}" for bam in input),
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
+	threads:
+		resource['resource']['high']['threads']
+	resources:
+		mem_mb=resource['resource']['high']['mem_mb']
+	conda:
+		"../envs/gatk4.6.1.0.yaml"
+	shell:
+		"""
+		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
+		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
+		-jar {params.gatk} GatherBamFiles \
+		{params.input_args} \
+		--OUTPUT {output.bam} \
+		--CREATE_INDEX true \
+		--CREATE_MD5_FILE true > {log} 2>&1
 		conda deactivate
 		"""
