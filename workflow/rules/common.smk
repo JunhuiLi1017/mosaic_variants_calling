@@ -13,6 +13,7 @@ units = pd.read_table(config["units"], dtype = str).set_index(
 )
 validate(units, schema = "../schemas/units.schema.yaml")
 
+#sample=units['sample'].unique().tolist()
 sample=units['sample']
 paired_end = config["paired"]
 outpath = config['outpath']

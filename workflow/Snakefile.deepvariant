@@ -1,0 +1,9 @@
+include: "rules/common.smk"
+#include: "rules/qc.smk"
+#include: "rules/map_reads.smk"
+include: "rules/variant_calling_deepvariant.smk"
+
+rule all:
+    input:
+        expand("{outpath}/03_variants/04_deepvariant/{sample}/{sample}.{chr}.{ref_version}.output.vcf.gz", outpath=outpath, sample=sample, ref_version=ref_version, chr=chromosomes),
+        expand("{outpath}/03_variants/04_deepvariant/{sample}/{sample}.{chr}.{ref_version}.output.gvcf.gz", outpath=outpath, sample=sample, ref_version=ref_version, chr=chromosomes)

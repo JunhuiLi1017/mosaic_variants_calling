@@ -1,0 +1,8 @@
+include: "rules/common.smk"
+#include: "rules/qc.smk"
+#include: "rules/map_reads.smk"
+include: "rules/variant_calling_deepsomatic.smk"
+
+rule all:
+    input:
+        expand("{outpath}/03_variants/03_deepsomatic/{sample}/{sample}.{chr}.{ref_version}.output.vcf.gz", outpath=outpath, sample=sample, ref_version=ref_version, chr=chromosomes)
