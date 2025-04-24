@@ -1,0 +1,9 @@
+include: "rules/common.smk"
+#include: "rules/qc.smk"
+#include: "rules/map_reads.smk"
+#include: "rules/variant_calling_haplotypecaller.smk"
+include: "rules/variant_calling_deepvariant_clinvar.smk"
+
+rule all:
+    input:
+        expand("{outpath}/03_variants/04_deepvariant/06_annovar/{sample}.{ref_version}_multianno.txt", outpath=outpath, sample=sample, ref_version=ref_version)

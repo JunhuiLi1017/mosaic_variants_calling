@@ -13,18 +13,25 @@ units = pd.read_table(config["units"], dtype = str).set_index(
 )
 validate(units, schema = "../schemas/units.schema.yaml")
 
-#sample=units['sample'].unique().tolist()
+sample_num=units['sample'].unique().tolist()
 sample=units['sample']
 paired_end = config["paired"]
 outpath = config['outpath']
 intervals_dir=config["interval"]
+hg38_sub_gnomad211_exome_genome_dir=config['hg38_sub_gnomad211_exome_genome_dir']
 ref_version=config["ref_version"]
 cov=config['depth']
 
 # Get the list of all interval files
 interval_files = glob.glob(os.path.join(intervals_dir, "*.intervals.list"))
 chromosomes = [os.path.basename(f).replace(".intervals.list", "") for f in interval_files]
+standard_order = [
+    "chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10",
+    "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19",
+    "chr20", "chr21", "chr22", "chrX", "chrY"
+]
 
+chromosomes = sorted(chromosomes, key=lambda x: standard_order.index(x) if x in standard_order else len(standard_order))
 
 def get_fastq(wildcards):
     """Get fastq files for given sample, library, and flowlane."""

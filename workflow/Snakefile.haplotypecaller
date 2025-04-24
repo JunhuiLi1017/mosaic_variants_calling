@@ -1,0 +1,9 @@
+include: "rules/common.smk"
+#include: "rules/qc.smk"
+#include: "rules/map_reads.smk"
+include: "rules/variant_calling_haplotypecaller.smk"
+
+rule all:
+    input:
+        expand("{outpath}/03_variants/02_haplotypecaller/{sample}/{sample}.vcf.gz", outpath=outpath, sample=sample),
+        expand("{outpath}/03_variants/02_haplotypecaller/{sample}/{sample}.vcf.gz.tbi", outpath=outpath, sample=sample)

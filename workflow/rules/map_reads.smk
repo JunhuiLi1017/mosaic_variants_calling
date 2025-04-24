@@ -106,7 +106,6 @@ rule remove_dup:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		mkdir -p {params.tmpdir}
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} -jar {params.gatk} \
 		MarkDuplicates {params.input_args} \
@@ -115,7 +114,6 @@ rule remove_dup:
 		{params.dedup} \
 		--TMP_DIR {params.tmpdir} \
 		--CREATE_INDEX true > {log} 2>&1
-		conda deactivate
 		"""
 
 rule SetNmMdAndUqTags:
@@ -137,7 +135,6 @@ rule SetNmMdAndUqTags:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} SetNmMdAndUqTags \
 		-I {input} \
@@ -145,7 +142,6 @@ rule SetNmMdAndUqTags:
 		-R {params.ref} \
 		--CREATE_INDEX true \
 		--CREATE_MD5_FILE true  > {log} 2>&1
-		conda deactivate
 		"""
 
 rule sortbam:
@@ -200,7 +196,6 @@ rule BaseRecalibrator:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} BaseRecalibrator \
 		-I {input} \
@@ -210,7 +205,6 @@ rule BaseRecalibrator:
 		--known-sites {params.dpsnp138} \
 		--known-sites {params.known_indels} \
 		--known-sites {params.Mills_and_1000G} > {log} 2>&1
-		conda deactivate
 		"""
 
 rule GatherBQSRreports:
@@ -232,12 +226,10 @@ rule GatherBQSRreports:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} GatherBQSRReports \
 		{params.input_args} \
 		-O {output.report} > {log} 2>&1
-		conda deactivate
 		"""
 
 rule ApplyBQSR:
@@ -263,7 +255,6 @@ rule ApplyBQSR:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} ApplyBQSR \
 		-I {input.bam} \
@@ -272,7 +263,6 @@ rule ApplyBQSR:
 		-L {params.interval_list} \
 		--bqsr-recal-file {input.recal_table} > {log} 2>&1
 		samtools stats {output.bam} > {params.prefix}.txt
-		conda deactivate
 		"""
 
 rule GatherBQSRBam:
@@ -287,7 +277,6 @@ rule GatherBQSRBam:
 	params:
 		gatk=config['gatk_current_using'],
 		input_args=lambda wildcards, input: " ".join(f"--INPUT {bam}" for bam in input.bam),
-		prefix="{outpath}/02_map/bqsr/{sample}/{sample}",
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
 	threads:
 		resource['resource']['high']['threads']
@@ -297,13 +286,10 @@ rule GatherBQSRBam:
 		"../envs/gatk4.6.1.0.yaml"
 	shell:
 		"""
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate gatk4.6.1.0
 		java -Xms{params.command_mem}m -XX:ParallelGCThreads={threads} \
 		-jar {params.gatk} GatherBamFiles \
 		{params.input_args} \
 		--OUTPUT {output.bam} \
 		--CREATE_INDEX true \
 		--CREATE_MD5_FILE true > {log} 2>&1
-		samtools stats {output.bam} > {params.prefix}.txt
-		conda deactivate
 		"""
