@@ -1,9 +1,0 @@
-include: "rules/common.smk"
-#include: "rules/qc.smk"
-#include: "rules/map_reads.smk"
-#include: "rules/variant_calling_haplotypecaller.smk"
-include: "rules/variant_calling_mutect2_clinvar.smk"
-
-rule all:
-    input:
-        expand("{outpath}/03_variants/01_mutect2/result/00_somatic_anno/02_annovar_clinvar/{sample}.{ref_version}_multianno.txt", outpath=OUTPATH, sample=SAMPLE, ref_version=REF_version)
