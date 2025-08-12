@@ -207,7 +207,7 @@ rule filter_common_dbsnp:
 		ref=config['reference'],
 		gatk=config['gatk_current_using'],
 		gnomad_0_001=hg38_sub_gnomad211_exome_genome_dir + "/{chr}.hg38_gnomad211_exome_genome_afpop_gt_0.01_chr.sort.txt",
-		dbsnp=config["dpsnp138"],
+		dbsnp=config["dbsnp138"],
 		pon=config["pon"],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
@@ -241,7 +241,7 @@ rule filter_common_pon:
 		ref=config['reference'],
 		gatk=config['gatk_current_using'],
 		gnomad_0_001=hg38_sub_gnomad211_exome_genome_dir + "/{chr}.hg38_gnomad211_exome_genome_afpop_gt_0.01_chr.sort.txt",
-		dbsnp=config["dpsnp138"],
+		dbsnp=config["dbsnp138"],
 		pon=config["pon"],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
@@ -275,7 +275,7 @@ rule filter_common_gnomad:
 		ref=config['reference'],
 		gatk=config['gatk_current_using'],
 		gnomad_0_001=hg38_sub_gnomad211_exome_genome_dir + "/{chr}.hg38_gnomad211_exome_genome_afpop_gt_0.01_chr.sort.txt",
-		dbsnp=config["dpsnp138"],
+		dbsnp=config["dbsnp138"],
 		pon=config["pon"],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
@@ -340,4 +340,27 @@ rule annotate_clinvar:
 		-operation g,f,f \
 		-nastring . \
 		-vcfinput
+		"""
+
+rule annotate_rcnv_gnomadlof:
+	input:
+		tier_anno="{outpath}/03_variants/02_haplotypecaller/06_annovar/{sample}.{ref_version}_multianno.txt"
+	output:
+		sub="{outpath}/03_variants/02_haplotypecaller/06_annovar/score/{sample}.SNV.tier.{ref_version}.exonic_splicing_multianno.txt",
+		txt="{outpath}/03_variants/02_haplotypecaller/06_annovar/score/{sample}.SNV.tier.{ref_version}.rcnv_gnomadlof_multianno.txt"
+	log:
+		"{outpath}/03_variants/logs/{sample}.{ref_version}.m2.rcnv_lof.log"
+	params:
+		ref_version=config['ref_version'],
+		gnomad_LoF=config['gnomad_LoF'],
+		rCNV_gene_score=config['rCNV_gene_score'],
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
+	threads:
+		resource['resource']['high']['threads']
+	resources:
+		mem_mb=resource['resource']['high']['mem_mb']
+	shell:
+		"""
+		cat <(awk '{{if($6=="exonic"){{print $0}}}}' {input.tier_anno} | grep -E 'nonsynonymous|stop') <(awk '{{if($6=="splicing"){{print $0}}}}' {input.tier_anno}) > {output.sub}
+		cat <(paste <(head -n 1 {input.tier_anno}) <(head -n 1 {params.gnomad_LoF}) <(head -n 1 {params.rCNV_gene_score})) <(awk 'NR==FNR{{c[$1]=$0}}NR!=FNR{{if(c[$7]){{print $0"\t"c[$7]}}else{{print $0"\tNA\tNA\tNA"}}}}' {params.gnomad_LoF} <(awk 'NR==FNR{{c[$1]=$0}}NR!=FNR{{if(c[$7]){{print $0"\t"c[$7]}}else{{print $0"\tNA\tNA\tNA"}}}}' {params.rCNV_gene_score} {output.sub})) > {output.txt}
 		"""

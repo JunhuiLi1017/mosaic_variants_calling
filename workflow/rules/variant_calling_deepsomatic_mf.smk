@@ -1,6 +1,6 @@
 rule gather_vcf:
 	input:
-		lambda wildcards: [f"{wildcards.outpath}/03_variants/03_deepsomatic/{wildcards.sample}/{wildcards.sample}.{chr}.{wildcards.ref_version}.output.vcf.gz" for chr in chromosomes]
+		lambda wildcards: [f"{wildcards.outpath}/03_variants/03_deepsomatic/{wildcards.sample}/{wildcards.sample}.{chr}.{wildcards.ref_version}.output.vcf.gz" for chr in CHROMOSOMES]
 	output:
 		vcf="{outpath}/03_variants/03_deepsomatic/01_result/{sample}/{sample}.{ref_version}.output.vcf.gz"
 	threads:
@@ -345,8 +345,8 @@ rule Annotation_SNV_Mosaic:
 		cd {params.outdir}
 		perl /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/ANNOVAR/annovar/table_annovar.pl \
 		{output.inputanno} \
-		/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_{ref_version} \
-		-buildver {ref_version} \
+		/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_{REF_version} \
+		-buildver {REF_version} \
 		-out {params.outputanno} \
 		-remove -protocol refGene,dbnsfp42a \
 		-operation g,f \
@@ -374,8 +374,8 @@ rule Annotation_INS_Mosaic:
 		cd {params.outdir}
 		perl /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/ANNOVAR/annovar/table_annovar.pl \
 		{output.inputanno} \
-		/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_{ref_version} \
-		-buildver {ref_version} \
+		/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_{REF_version} \
+		-buildver {REF_version} \
 		-out {params.outputanno} \
 		-remove -protocol refGene,dbnsfp42a \
 		-operation g,f \
@@ -401,8 +401,8 @@ rule Annotation_DEL_Mosaic:
 		cat {output.mosaic} | awk 'BEGIN {{ FS = "~" }} ; {{ print $2"\\t"$3"\\t"$3+length($4)-1"\\t"$4"\\t"$5 }}' | tail -n +2 > {output.inputanno}
 		perl /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/ANNOVAR/annovar/table_annovar.pl \
 		{output.inputanno} \
-		/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_{ref_version} 
-		-buildver {ref_version} \
+		/pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_{REF_version} 
+		-buildver {REF_version} \
 		-out {params.outputanno} \
 		-remove -protocol refGene,dbnsfp42a \
 		-operation g,f \
@@ -493,8 +493,8 @@ rule gnomAD_vcf_tier2_3_subchr:
 
 rule gather_gnomAD_vcf_tier2_3:
 	input:
-		vcf_tier3=lambda wildcards: [f"{wildcards.outpath}/03_variants/03_deepsomatic/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier3.{chr}.vcf" for chr in chromosomes],
-		vcf_tier2=lambda wildcards: [f"{wildcards.outpath}/03_variants/03_deepsomatic/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier2.{chr}.vcf" for chr in chromosomes]		
+		vcf_tier3=lambda wildcards: [f"{wildcards.outpath}/03_variants/03_deepsomatic/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier3.{chr}.vcf" for chr in CHROMOSOMES],
+		vcf_tier2=lambda wildcards: [f"{wildcards.outpath}/03_variants/03_deepsomatic/tier/{wildcards.sample}/overlap_gnomAD/{wildcards.sample}.{wildcards.cov}.SNV.{wildcards.ref_version}.sub.tier2.{chr}.vcf" for chr in CHROMOSOMES]		
 	output:
 		vcf_tier3="{outpath}/03_variants/03_deepsomatic/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier3.vcf",
 		vcf_tier2="{outpath}/03_variants/03_deepsomatic/tier/{sample}/{sample}.{cov}.SNV.{ref_version}.sub.tier2.vcf"

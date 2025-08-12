@@ -1,0 +1,52 @@
+$schema: "http://json-schema.org/draft-04/schema#"
+
+description: resource configuration schema
+properties:
+  low:
+    type: object
+    description: low resource configuration
+    properties:
+      mem_mb:
+        type: integer
+        description: memory in MB
+        default: 1000
+      threads:
+        type: integer
+        description: number of threads
+        default: 2
+  medium:
+    type: object
+    description: medium resource configuration
+    properties:
+      mem_mb:
+        type: integer 
+        description: memory in MB
+        default: 2000
+      threads:
+        type: integer
+        description: number of threads
+        default: 4
+  high:
+    type: object
+    description: high resource configuration
+    properties:
+      mem_mb:
+        type: integer
+        description: memory in MB
+        default: 3000
+      threads:
+        type: integer
+        description: number of threads
+        default: 8
+  very_high:
+    type: object
+    description: very high resource configuration
+    properties:
+      mem_mb:
+        type: integer
+        description: memory in MB
+        default: 4000
+      threads:
+        type: integer
+        description: number of threads
+        default: 8

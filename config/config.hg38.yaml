@@ -1,0 +1,112 @@
+##-------------------
+## units and resource
+##-------------------
+units: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/mosaic_variants_calling/config/units.tsv
+resource: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/IDT_target/20250714/config/resources.yaml
+
+outpath: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/02ProcessedData/target_seq/20250808
+
+##-------------------
+## reference
+##-------------------
+ref_version: hg38
+reference: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/bundle/hg38/Homo_sapiens_assembly38.fasta
+interval: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/bundle/hg38/interval
+dbsnp138: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/bundle/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz
+mills_and_1000g: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/bundle/hg38/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz
+pon: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/GATK/Mutect2/1000g_pon.hg38.vcf.gz
+af_only_gnomad: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/Regions_to_filter_out/hg38/af-only-gnomad/af-only-gnomad.hg38.vcf.gz
+hapmap: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/bundle/hg38/hapmap_3.3.hg38.vcf.gz
+omni: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/bundle/hg38/1000G_omni2.5.hg38.vcf.gz
+g1000_known_indels: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/bundle/hg38/1000G_phase3_v4_20130502.sites.hg38.vcf.gz
+SegDup_and_clustered: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/resources/SegDup_and_clustered.GRCh38.bed
+allrepeats_forindel: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/resources/allrepeats_forindel.GRCh38.bed
+umap: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/Umap/hg38/k24.umap.wg.bw
+avail_acess_1000g: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/02_filter/hg38/20160622.allChr.mask.bed
+
+calculate_mean_depth_script:  /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/mosaic_variants_calling/workflow/scripts/calculate_mean_dep_samtools_stat.py
+##-------------------
+## mosaicforecast model
+##-------------------
+refine_beta: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/250xRFmodel_addRMSK_Refine.rds
+phase_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/brain_MT2-PON.250x_MosaicForecast-Phase_pvalue.rds
+insertion_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/insertions_250x.RF.rds
+deletion_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/deletions_250x.RF.rds
+coverage: 250x
+
+##-------------------
+## gnomad
+##-------------------
+hg38_sub_gnomad211_exome_genome_dir: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/hg38_sub_gnomad211_exome_genome
+gnomad_exome: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/hg38_gnomad211_exome.chr.sort.txt.gz
+gnomad_genome: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/hg38_gnomad211_genome.chr.sort.txt.gz
+gnomad_exome_header: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/header_gnomad_exome
+gnomad_genome_header: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar/humandb_gnomad211_genome_exome/header_gnomad_genome
+
+
+##-------------------
+## snv
+##-------------------
+gnomad_LoF: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/gene_score_als_gene/gnomad_LoF_hg38.reform.txt
+rCNV_gene_score: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/gene_score_als_gene/rCNV_gene_score.hg38.txt
+deepvariant_model: WGS
+
+##-------------------
+## software
+##-------------------
+annovar_dir: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/ANNOVAR/annovar
+reformat_script: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/GATK_mutect2/workflow/scripts/reformat_vcf_dataset.py 
+process_tier_script: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/GATK_mutect2/workflow/scripts/process_tier_vcf.py
+split_by_chrom: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/GATK_mutect2/workflow/scripts/split_by_chrom.py
+extract_variants: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/GATK_mutect2/workflow/scripts/extract_variants.py
+gatk_4.0.12.0_path: /home/junhui.li11-umw/anaconda3/envs/gatk4.0.xx/share/gatk4-4.0.12.0-0/gatk-package-4.0.12.0-local.jar
+gatk_4.1.8.1_path: /home/junhui.li11-umw/anaconda3/envs/snakemake/share/gatk4-4.1.8.1-0/gatk-package-4.1.8.1-local.jar
+gatk_current_using: /home/junhui.li11-umw/anaconda3/envs/gatk4.6.1.0/share/gatk4-4.6.1.0-0/gatk-package-4.6.1.0-local.jar
+RePlow: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/target_sequence_analysis/software/RePlow.jar
+genomefolders: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/database_fromHPCC/dataset/bundle/hg38/pisces
+versionsorted: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/target_sequence_analysis/database/hg38/hg38.versionsorted.genome
+
+callers:
+  - haplotypecaller
+  - deepvariant
+  - deepsomatic
+  - mutect2
+
+ReadLevel_Features_extraction: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/ReadLevel_Features_extraction.py
+prediction_r_script: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/Prediction.R
+prediction_indel_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/insertions_250x.RF.rds
+prediction_snv_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/snvs_250x.RF.rds
+
+mosaic_pred_model:
+  - Refine
+
+
+##-------------------
+## container
+##-------------------
+##-------01_qc-------
+bedtools_2.31.1: docker://junhuili/terra_bedtools:2.31.1--h13024bc_3
+fastp_0.22.0: docker://junhuili/fastp:latest
+fastqc_0.11.9: docker://biocontainers/fastqc:v0.11.9_cv8
+multiqc_1.22.3: docker://multiqc/multiqc:latest
+
+##-------02_map-------
+samtools_1.20: docker://junhuili/terra_samtools:1.20
+sambamba_1.0.1: docker://junhuili/sambamba:1.0.1
+terra_deeptools_0.1: docker://junhuili/terra_deeptools:0.1
+gatk_4.6.1.0: docker://broadinstitute/gatk:4.6.1.0
+gatk_4.1.8.1: docker://broadinstitute/gatk:4.1.8.1
+py_3.21: docker://python:alpine3.21
+
+##-------03_variant_calling-------
+vcftools_0.1.16: docker://biocontainers/vcftools:v0.1.16-1-deb_cv1
+bcftools_1.9: docker://biocontainers/bcftools:v1.9-1-deb_cv1
+
+deepsomatic_1.8.0: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/mosaic_variants_calling_largeinput/workflow/envs/deepsomatic_1.8.0.sif
+deepvariant_1.8.1: docker://ksinghal28/deepvariant:1.8.1
+terra_r: docker://junhuili/terra_r:latest
+python_alpine3.21: docker://python:alpine3.21
+
+##-------04_filter-------
+terra_py_tools: docker://junhuili/terra_py_tools:latest
+terra_perl_anno: docker://junhuili/terra_perl_anno:latest

@@ -6,10 +6,10 @@ include: "rules/variant_calling_deepsomatic_mf.smk"
 
 rule all:
     input:
-        #expand("{outpath}/03_variants/03_deepsomatic/{sample}/{sample}.{chr}.{ref_version}.output.vcf.gz", outpath=outpath, sample=sample, ref_version=ref_version, chr=chromosomes)
+        #expand("{outpath}/03_variants/03_deepsomatic/{sample}/{sample}.{chr}.{ref_version}.output.vcf.gz", outpath=OUTPATH, sample=SAMPLE, ref_version=REF_version, chr=CHROMOSOMES)
         expand("{outpath}/03_variants/03_deepsomatic/{sample}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
+               outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version),
         expand("{outpath}/03_variants/03_deepsomatic/{sample}.{cov}.INS.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
+               outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version),
         expand("{outpath}/03_variants/03_deepsomatic/{sample}.{cov}.DEL.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version)
+               outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version)

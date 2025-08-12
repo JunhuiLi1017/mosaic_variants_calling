@@ -1,14 +1,31 @@
 include: "rules/common.smk"
-#include: "rules/qc.smk"
+include: "rules/qc.smk"
 include: "rules/map_reads.smk"
 include: "rules/variant_calling_m2_mf.smk"
 
 rule all:
     input:
-        expand("{outpath}/01_multiqc/multiqc_report.html", outpath=outpath),
-        expand("{outpath}/03_variants/01_mutect2/{sample}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
-        expand("{outpath}/03_variants/01_mutect2/{sample}.{cov}.INS.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
-        expand("{outpath}/03_variants/01_mutect2/{sample}.{cov}.DEL.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
+       expand("{outpath}/01_multiqc/multiqc_report.html", outpath=OUTPATH),
+       expand("{outpath}/03_variants/01_mutect2/02_mosaicforecast/{sample}.{cov}.SNV.{ref_version}.mosaic_summary.txt", 
+              outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version),
+       expand("{outpath}/03_variants/01_mutect2/02_mosaicforecast/{sample}.{cov}.INS.{ref_version}.mosaic_summary.txt", 
+              outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version),
+       expand("{outpath}/03_variants/01_mutect2/02_mosaicforecast/{sample}.{cov}.DEL.{ref_version}.mosaic_summary.txt", 
+              outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version)
+
+
+include: "rules/00_common.smk"
+include: "rules/01_qc.smk"
+include: "rules/02_map_reads.smk"
+include: "rules/03_variant_calling_mutect2.smk"
+include: "rules/03_variant_calling_m2_mosaicforecast_anno.smk"
+include: "rules/03_variant_calling_haplotypecaller.smk"
+include: "rules/03_variant_calling_deepvariant.smk"
+include: "rules/03_variant_calling_deepsomatic.smk"
+include: "rules/04_filter_anno_clinvar.smk"
+
+rule all:
+    input:
+        expand("{outpath}/01_multiqc/multiqc_report.html", outpath=Outpath),
+        expand("{outpath}/03_variants/mosaic_report.html", outpath=Outpath),
+        expand("{outpath}/03_variants/variant_report.html", outpath=Outpath)

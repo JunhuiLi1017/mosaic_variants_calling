@@ -7,22 +7,43 @@ properties:
     description: sample name/id the unit has been sequenced from
   library:
     type: string
-    description: library prep id
+    description: library id
   flowlane:
     type: string
-    description: flowcell and line id
+    description: flowlane id
   platform:
     type: string
     enum: ["CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "ONT", "PACBIO"]
+    description: platform used for sequencing
   fq1:
     type: string
     description: path to FASTQ file
   fq2:
     type: string
     description: path to second FASTQ file (leave empty in case of single-end)
+  trim_front1:
+    type: integer
+    description: trim value for front of fq1, if 0, no trimming
+  trim_front2:
+    type: integer
+    description: trim value for front of fq2, if 0, no trimming
+  trim_tail1:
+    type: integer
+    description: trim value for tail of fq1, if 0, no trimming
+  trim_tail2:
+    type: integer
+    description: trim value for tail of fq2, if 0, no trimming
+  pcr_based:
+    type: boolean
+    description: whether the library is pcr based
 required:
   - sample
   - library
   - flowlane
   - platform
   - fq1
+  - trim_front1
+  - trim_front2
+  - trim_tail1
+  - trim_tail2
+  - pcr_based

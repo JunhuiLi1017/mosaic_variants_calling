@@ -5,5 +5,5 @@ include: "rules/variant_calling_deepvariant.smk"
 
 rule all:
     input:
-        expand("{outpath}/03_variants/04_deepvariant/{sample}/{sample}.{chr}.{ref_version}.output.vcf.gz", outpath=outpath, sample=sample, ref_version=ref_version, chr=chromosomes),
-        expand("{outpath}/03_variants/04_deepvariant/{sample}/{sample}.{chr}.{ref_version}.output.gvcf.gz", outpath=outpath, sample=sample, ref_version=ref_version, chr=chromosomes)
+        expand("{outpath}/03_variants/04_deepvariant/{sample}/{sample}.{chr}.{ref_version}.output.vcf.gz", outpath=OUTPATH, sample=SAMPLE, ref_version=REF_version, chr=CHROMOSOMES),
+        expand("{outpath}/03_variants/04_deepvariant/{sample}/{sample}.{chr}.{ref_version}.output.gvcf.gz", outpath=OUTPATH, sample=SAMPLE, ref_version=REF_version, chr=CHROMOSOMES)

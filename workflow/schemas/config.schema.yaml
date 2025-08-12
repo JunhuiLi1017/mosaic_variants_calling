@@ -5,9 +5,68 @@ description: snakemake configuration file
 type: object
 
 properties:
-  samples:
+  resource:
     type: string
   units:
     type: string
+  callers:
+    type: array
+    items:
+      type: string
+      enum: ["mutect2", "haplotypecaller", "deepvariant", "deepsomatic"]
+  meta_sample:
+    type: string
+  outpath:
+    type: string
+  ref_version:
+    type: string
+  reference:
+    type: string
+  interval:
+    type: string
+  dpsnp138:
+    type: string
+  known_indels:
+    type: string
+  pon:
+    type: string
+  af_only_gnomad:
+    type: string
+  TargeRegion:
+    type: string
+  FlankRegion:
+    type: string
+  MosaicRegion:
+    type: string
+  FinalRegion:
+    type: string
+  gnomad_LoF:
+    type: string
+  rCNV_gene_score:
+    type: string
+  annovar_dir:
+    type: string
+  reformat_script:
+    type: string
+  process_tier_script:  
+    type: string
+  split_by_chrom:
+    type: string
+  extract_variants:
+    type: string
+  gatk_4.0.12.0_path:
+    type: string
+  gatk_4.1.8.1_path:
+    type: string
+  gatk_current_using:
+    type: string
+  RePlow:
+    type: string
+  genomefolders:
+    type: string
+  versionsorted:
+    type: string
 required:
+  - resource
   - units
+  - callers

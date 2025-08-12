@@ -1,0 +1,10 @@
+include: "rules/common.smk"
+#include: "rules/qc.smk"
+#include: "rules/map_reads.smk"
+#include: "rules/variant_calling_m2_mf.smk"
+include: "rules/map_mean_depth.smk"
+
+rule all:
+    input:
+       expand("{outpath}/02_map/stats/{sample}.mean_depth.{ref_version}.txt", 
+              outpath=OUTPATH, sample=SAMPLE, ref_version=REF_version)

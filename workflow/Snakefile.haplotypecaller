@@ -5,5 +5,5 @@ include: "rules/variant_calling_haplotypecaller.smk"
 
 rule all:
     input:
-        expand("{outpath}/03_variants/02_haplotypecaller/{sample}/{sample}.vcf.gz", outpath=outpath, sample=sample),
-        expand("{outpath}/03_variants/02_haplotypecaller/{sample}/{sample}.vcf.gz.tbi", outpath=outpath, sample=sample)
+        expand("{outpath}/03_variants/02_haplotypecaller/{sample}/{sample}.vcf.gz", outpath=OUTPATH, sample=SAMPLE),
+        expand("{outpath}/03_variants/02_haplotypecaller/{sample}/{sample}.vcf.gz.tbi", outpath=OUTPATH, sample=SAMPLE)

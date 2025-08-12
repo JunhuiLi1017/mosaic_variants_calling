@@ -5,10 +5,10 @@ include: "rules/variant_calling_m2_mf.smk"
 
 rule all:
     input:
-        #expand("{outpath}/01_multiqc/multiqc_report.html", outpath=outpath),
-        expand("{outpath}/03_variants/01_mutect2/{sample}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
-        expand("{outpath}/03_variants/01_mutect2/{sample}.{cov}.INS.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version),
-        expand("{outpath}/03_variants/01_mutect2/{sample}.{cov}.DEL.{ref_version}.mosaic_summary.txt", 
-               outpath=outpath, sample=sample, cov=cov, ref_version=ref_version)
+        #expand("{outpath}/01_multiqc/multiqc_report.html", outpath=OUTPATH),
+        expand("{outpath}/03_variants/01_mutect2/02_mosaicforecast/{sample}.{model}.{cov}.SNV.tier.{ref_version}.mosaic_summary.txt", 
+               outpath=OUTPATH, sample=SAMPLE, model=Model, cov=cov, ref_version=REF_version),
+        expand("{outpath}/03_variants/01_mutect2/02_mosaicforecast/{sample}.{model}.{cov}.INS.{ref_version}.mosaic_summary.txt", 
+               outpath=OUTPATH, sample=SAMPLE, model=Model, cov=cov, ref_version=REF_version),
+        expand("{outpath}/03_variants/01_mutect2/02_mosaicforecast/{sample}.{model}.{cov}.DEL.{ref_version}.mosaic_summary.txt", 
+               outpath=OUTPATH, sample=SAMPLE, model=Model, cov=cov, ref_version=REF_version)

@@ -6,4 +6,5 @@ include: "rules/variant_calling_deepvariant_clinvar.smk"
 
 rule all:
     input:
-        expand("{outpath}/03_variants/04_deepvariant/06_annovar/{sample}.{ref_version}_multianno.txt", outpath=outpath, sample=sample, ref_version=ref_version)
+        expand("{outpath}/03_variants/04_deepvariant/06_annovar/score/{sample}.SNV.tier.{ref_version}.exonic_splicing_multianno.txt", outpath=OUTPATH, sample=SAMPLE, ref_version=REF_version),
+		expand("{outpath}/03_variants/04_deepvariant/06_annovar/score/{sample}.SNV.tier.{ref_version}.rcnv_gnomadlof_multianno.txt", outpath=OUTPATH, sample=SAMPLE, ref_version=REF_version)

@@ -2,25 +2,26 @@ rule run_deepsomatic:
 	message:
 		"The BAM file must be also sorted and indexed. Duplicate marking may be performed, in our analyses there is almost no difference in accuracy except at lower (<20x) coverages. Finally, we recommend that you do not perform BQSR."
 	input:
-		bam="{outpath}/02_map/settags/{sample}/{sample}.rmdup.settags.sort.bam",
-		bai="{outpath}/02_map/settags/{sample}/{sample}.rmdup.settags.sort.bam.bai"
+		bam="{outpath}/02_map/04_settags/{sample}.rmdup.settags.sort.bam",
+		bai="{outpath}/02_map/04_settags/{sample}.rmdup.settags.sort.bam.bai"
 	output:
-		vcf="{outpath}/03_variants/03_deepsomatic/{sample}/{sample}.{individual_chr}.{ref_version}.output.vcf.gz"
+		vcf="{outpath}/03_variants/deepsomatic/01_raw/{sample}.{chr}.vcf.gz",
+		tbi="{outpath}/03_variants/deepsomatic/01_raw/{sample}.{chr}.vcf.gz.tbi"
 	log:
-		"{outpath}/03_variants/logs/{sample}.{individual_chr}.{ref_version}.deepsomatic.log"
+		"{outpath}/03_variants/logs/{sample}.{chr}.deepsomatic.log"
 	params:
 		model_type="WGS_TUMOR_ONLY",
 		ref=config['reference'],
-		interval_list=intervals_dir + "/{individual_chr}.intervals.list",
-		intermediate_dir="{outpath}/03_variants/03_deepsomatic/{sample}/{sample}.{individual_chr}.{ref_version}.intermediate_results_dir",
+		interval_list=intervals_dir + "/{chr}.intervals.list",
+		intermediate_dir="{outpath}/03_variants/deepsomatic/01_raw/{sample}.{chr}.intermediate_results_dir",
 		sample="{sample}",
-		chr="{individual_chr}"
+		chr="{chr}"
 	threads:
 		resource['resource']['very_high']['threads']
 	resources:
 		mem_mb=resource['resource']['very_high']['mem_mb']
 	container:
-		"library://junhuili/deepvariant/deepsomatic:1.8.0"
+		config["deepsomatic_1.8.0"]
 	shell:
 		"""
 		run_deepsomatic \

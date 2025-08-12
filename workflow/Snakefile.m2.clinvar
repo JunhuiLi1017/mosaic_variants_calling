@@ -6,4 +6,4 @@ include: "rules/variant_calling_mutect2_clinvar.smk"
 
 rule all:
     input:
-        expand("{outpath}/03_variants/01_mutect2/result/00_somatic_anno/02_annovar_clinvar/{sample}.{ref_version}_multianno.txt", outpath=outpath, sample=sample, ref_version=ref_version)
+        expand("{outpath}/03_variants/01_mutect2/result/00_somatic_anno/02_annovar_clinvar/{sample}.{ref_version}_multianno.txt", outpath=OUTPATH, sample=SAMPLE, ref_version=REF_version)

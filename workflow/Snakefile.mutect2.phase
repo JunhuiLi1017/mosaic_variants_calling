@@ -1,0 +1,14 @@
+include: "rules/common.smk"
+#include: "rules/qc.smk"
+#include: "rules/map_reads.smk"
+include: "rules/variant_calling_m2_mf_phase.smk"
+
+rule all:
+    input:
+        #expand("{outpath}/01_multiqc/multiqc_report.html", outpath=OUTPATH),
+        expand("{outpath}/03_variants_case_control/01_mutect2_pon/02_mosaicforecast/{sample}.{cov}.SNV.{ref_version}.mosaic_summary_phase.txt", 
+               outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version),
+        expand("{outpath}/03_variants_case_control/01_mutect2_pon/02_mosaicforecast/{sample}.{cov}.INS.{ref_version}.mosaic_summary_phase.txt", 
+               outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version),
+        expand("{outpath}/03_variants_case_control/01_mutect2_pon/02_mosaicforecast/{sample}.{cov}.DEL.{ref_version}.mosaic_summary_phase.txt", 
+               outpath=OUTPATH, sample=SAMPLE, cov=cov, ref_version=REF_version)
