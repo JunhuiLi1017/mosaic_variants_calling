@@ -15,7 +15,7 @@ rule split_multiallelic:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bcftools_1.9"]
 	shell:
 		"""
 		bcftools norm \
@@ -41,7 +41,7 @@ rule pass_filter:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bcftools_1.9"]
 	shell:
 		"""
 		bcftools filter \
@@ -75,7 +75,7 @@ rule filter_common_snps:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bcftools_1.9"]
 	shell:
 		"""
 		bcftools annotate -a {params.dbsnp} -c ID {input.vcf} | bcftools view -e 'ID != "."' | bgzip > {output.vcf_dbsn_filter} && tabix -p vcf {output.vcf_dbsn_filter}
@@ -102,7 +102,7 @@ rule merge_chr:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bcftools_1.9"]
 	shell:
 		"""
 		bcftools concat -a {input.vcf} | bcftools sort | bgzip > {output.vcf}
@@ -126,7 +126,7 @@ rule annotate_clinvar:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["terra_perl_anno"]
+		container_image["terra_perl_anno"]
 	shell:
 		"""
 		perl {params.annovar_dir}/table_annovar.pl \
@@ -178,8 +178,6 @@ rule reformat_rcnv_gnomadlof_germ:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
-	container:
-		config["python_alpine3.21"]
 	shell:
 		"""
 		python {params.reformat_script} {input.txt} {output.txt} --info-column "Otherinfo12" --gt-column "Otherinfo13" > {log} 2>&1

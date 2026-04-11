@@ -27,8 +27,7 @@ rule map_reads_sort:
 	input:
 		"{outpath}/02_map/01_raw/{sample}.{library}.{flowlane}.raw.bam"
 	output:
-		o2=temp("{outpath}/02_sort/{sample}.{library}.{flowlane}.sort.bam"),
-		o3="{outpath}/02_sort/{sample}.{library}.{flowlane}.sort.stat"
+		o2=temp("{outpath}/02_map/02_sort/{sample}.{library}.{flowlane}.sort.bam")
 	log:
 		"{outpath}/logs/bwa/{sample}.{library}.{flowlane}.bwa.sort.log"
 	threads:
@@ -36,10 +35,10 @@ rule map_reads_sort:
 	resources:
 		mem_mb=resource['resource']['very_high']['mem_mb']
 	params:
-		tmpdir="{outpath}/02_sort/tmpdir_{sample}",
+		tmpdir="{outpath}/02_map/02_sort/tmpdir_{sample}",
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000) // threads
 	container:
-		config["sambamba_1.0.1"]
+		container_image["sambamba_1.0.1"]
 	shell:
 		"""
 		mkdir -p {params.tmpdir} && \
@@ -49,25 +48,21 @@ rule map_reads_sort:
 		-o {output.o2} \
 		--tmpdir {params.tmpdir} \
 		{input} > {log} 2>&1
-		samtools stats {output.o2} > {output.o3}
-		samtools index {output.o2}
 		"""
 
 rule map_reads_sort_index:
 	input:
-		"{outpath}/02_sort/{sample}.{library}.{flowlane}.sort.bam"
+		"{outpath}/02_map/02_sort/{sample}.{library}.{flowlane}.sort.bam"
 	output:
-		"{outpath}/02_sort/{sample}.{library}.{flowlane}.sort.stat"
+		"{outpath}/02_map/02_sort/{sample}.{library}.{flowlane}.sort.stat"
 	log:
 		"{outpath}/logs/bwa/{sample}.{library}.{flowlane}.bwa.sort.indelx.log"
 	threads:
 		resource['resource']['medium']['threads']
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
-	params:
-		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000) // threads
 	container:
-		config["samtools_1.20"]
+		container_image["samtools_1.20"]
 	shell:
 		"""
 		samtools index {input}
@@ -76,10 +71,11 @@ rule map_reads_sort_index:
 
 rule map_reads_frag:
 	input:
-		i1="{outpath}/02_sort/{sample}.{library}.{flowlane}.sort.bam"
+		i1="{outpath}/02_map/02_sort/{sample}.{library}.{flowlane}.sort.bam",
+		i2="{outpath}/02_map/02_sort/{sample}.{library}.{flowlane}.sort.stat"
 	output:
-		o1="{outpath}/02_sort/{sample}.{library}.{flowlane}.sort.insert.png",
-		o2="{outpath}/02_sort/{sample}.{library}.{flowlane}.sort.fragment.txt"
+		o1="{outpath}/02_map/02_sort/{sample}.{library}.{flowlane}.sort.insert.png",
+		o2="{outpath}/02_map/02_sort/{sample}.{library}.{flowlane}.sort.fragment.txt"
 	log:
 		"{outpath}/logs/bwa/{sample}.{library}.{flowlane}.bwa.sort.frag.log"
 	threads:
@@ -87,7 +83,7 @@ rule map_reads_frag:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["terra_deeptools_0.1"]
+		container_image["terra_deeptools_0.1"]
 	shell:
 		"""
 		bamPEFragmentSize -b {input.i1} \
@@ -99,7 +95,7 @@ rule map_reads_frag:
 rule remove_dup:
 	input:
 		lambda wildcards: [
-			f"{wildcards.outpath}/02_sort/{wildcards.sample}.{u.library}.{u.flowlane}.sort.bam"
+			f"{wildcards.outpath}/02_map/02_sort/{wildcards.sample}.{u.library}.{u.flowlane}.sort.bam"
 			for u in units[units["sample"] == wildcards.sample].itertuples()
 		]
 	output:
@@ -116,7 +112,6 @@ rule remove_dup:
 		),
 		tmpdir="{outpath}/02_map/03_dup/tmpdir_{sample}",
 		input_args=lambda wildcards, input: " ".join(f"--INPUT {bam}" for bam in input),
-		gatk=config['gatk_current_using'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 8000)
 	threads:
 		resource['resource']['very_high']['threads']
@@ -124,7 +119,7 @@ rule remove_dup:
 		mem_mb=resource['resource']['very_high']['mem_mb']
 		#mem_mb=5000
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		mkdir -p {params.tmpdir}
@@ -145,7 +140,6 @@ rule SetNmMdAndUqTags:
 	log:
 		"{outpath}/02_map/logs/{sample}.settags.log"
 	params:
-		gatk=config['gatk_current_using'],
 		ref=config['reference'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
 	threads:
@@ -153,7 +147,7 @@ rule SetNmMdAndUqTags:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -180,7 +174,7 @@ rule SetNmMdAndUqTags_sortbam:
 		tmpdir="{outpath}/02_map/04_settags/tmpdir_{sample}",
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000) // threads
 	container:
-		config["sambamba_1.0.1"]
+		container_image["sambamba_1.0.1"]
 	shell:
 		"""
 		mkdir -p {params.tmpdir} && \
@@ -206,7 +200,7 @@ rule SetNmMdAndUqTags_sortbam_index:
 	params:
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000) // threads
 	container:
-		config["samtools_1.20"]
+		container_image["samtools_1.20"]
 	shell:
 		"""
 		samtools index {input}
@@ -220,7 +214,6 @@ rule BaseRecalibrator:
 	log:
 		"{outpath}/02_map/logs/{sample}.{chr}.recal.log"
 	params:
-		gatk=config['gatk_current_using'],
 		ref=config['reference'],
 		dbsnp138=config['dbsnp138'],
 		g1000_known_indels=config['g1000_known_indels'],
@@ -232,7 +225,7 @@ rule BaseRecalibrator:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -254,7 +247,6 @@ rule GatherBQSRreports:
 	log:
 		"{outpath}/02_map/logs/{sample}.GatherBQSRreports.log"
 	params:
-		gatk=config['gatk_current_using'],
 		input_args=lambda wildcards, input: " ".join(f"-I {report}" for report in input),
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
 	threads:
@@ -262,7 +254,7 @@ rule GatherBQSRreports:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -282,7 +274,6 @@ rule ApplyBQSR:
 		"{outpath}/02_map/logs/{sample}.{chr}.applyBQSR.log"
 	params:
 		ref=config['reference'],
-		gatk=config['gatk_current_using'],
 		interval_list=intervals_dir + "/{chr}.intervals.list",
 		prefix="{outpath}/02_map/07_bqsr_subchr/{sample}.{chr}",
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
@@ -291,7 +282,7 @@ rule ApplyBQSR:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -316,7 +307,7 @@ rule samtools_stats_chr_ApplyBQSR:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["samtools_1.20"]
+		container_image["samtools_1.20"]
 	shell:
 		"""
 		samtools stats {input.bam} > {output.stats}
@@ -333,7 +324,6 @@ rule GatherBQSRBam:
 	log:
 		"{outpath}/02_map/logs/{sample}.gatherbqsrbam.log"
 	params:
-		gatk=config['gatk_current_using'],
 		input_args=lambda wildcards, input: " ".join(f"--INPUT {bam}" for bam in input.bam),
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 4000)
 	threads:
@@ -341,7 +331,7 @@ rule GatherBQSRBam:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \

@@ -1,0 +1,17 @@
+include: "rules/00_common.smk"
+include: "rules/01_qc.smk"
+include: "rules/02_map_reads.smk"
+include: "rules/02_map_report.smk"
+include: "rules/03_variant_calling_mutect2.smk"
+include: "rules/03_variant_calling_m2_mosaicforecast_anno.smk"
+#include: "rules/03_variant_calling_haplotypecaller.smk"
+#include: "rules/03_variant_calling_deepvariant.smk"
+#include: "rules/03_variant_calling_deepsomatic.smk"
+#include: "rules/03_variant_calling_m2_deepmosaic.smk"
+#include: "rules/04_filter_anno_clinvar.smk"
+
+rule all:
+    input:
+        expand("{outpath}/01_multiqc/multiqc_report.html", outpath=Outpath),
+        expand("{outpath}/02_map/multiqc_report_map.html", outpath=Outpath),
+        expand("{outpath}/03_variants/mosaic_report.html", outpath=Outpath)

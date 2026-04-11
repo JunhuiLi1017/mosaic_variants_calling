@@ -1,3 +1,23 @@
+rule bam_stat:
+	input:
+		"{outpath}/02_map/08_bqsr/{sample}.bam"
+	output:
+		"{outpath}/02_map/08_bqsr/{sample}.bam.stat.txt"
+	log:
+		"{outpath}/03_variants/logs/{sample}.stat.log"
+	params:
+		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
+	threads:
+		resource['resource']['high']['threads']
+	resources:
+		mem_mb=resource['resource']['high']['mem_mb']
+	container:
+		container_image["samtools_1.20"]
+	shell:
+		'''
+		samtools stats {input} > {output}
+		'''
+
 rule Mutect2:
 	input:
 		"{outpath}/02_map/08_bqsr/{sample}.bam"
@@ -12,14 +32,13 @@ rule Mutect2:
 		ref=config['reference'],
 		sample="{sample}",
 		interval_list=intervals_dir + "/{chr}.intervals.list",
-		gatk=config['gatk_current_using'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
 		resource['resource']['high']['threads']
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		'''
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -54,7 +73,7 @@ rule vcf_merge:
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["vcftools_0.1.16"]
+		container_image["vcftools_0.1.16"]
 	shell:
 		'''
 		ls {input} > {output.args}
@@ -68,8 +87,7 @@ rule merge_mutectstats:
 	output:
 		"{outpath}/03_variants/mutect2/00_initial_call/02_merge/{sample}.vcf.gz.stats"
 	params:
-		list_para = lambda wildcards: ' '.join([f"--stats {wildcards.outpath}/03_variants/mutect2/00_initial_call/01_chr_sub/{wildcards.sample}.{chr}.mt2pon.vcf.gz.stats" for chr in CHROMOSOMES]),
-		gatk=config['gatk_current_using'],
+		list_para = lambda wildcards: ' '.join([f"--stats {wildcards.outpath}/03_variants/mutect2/00_initial_call/01_chr_sub/{wildcards.sample}.{chr}.vcf.gz.stats" for chr in CHROMOSOMES]),
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	log:
 		"{outpath}/03_variants/logs/{sample}.MergeMutectStats.log"
@@ -78,7 +96,7 @@ rule merge_mutectstats:
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		'''
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -99,21 +117,20 @@ rule FilterMutectCall:
 		"{outpath}/03_variants/logs/{sample}.filter.log"
 	params:
 		ref=config['reference'],
-		gatk=config['gatk_current_using'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
-		resource['resource']['medium']['threads']
+		resource['resource']['high']['threads']
 	resources:
-		mem_mb=resource['resource']['medium']['mem_mb']
+		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		'''
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
-		FilterMutectCalls -R {params.ref} -V {input.vcf} -O {output} > {log} 2>&1
+		FilterMutectCalls -R {params.ref} -V {input.vcf} -O {output.vcf} > {log} 2>&1
 		'''
 
-rule spliet_vcf_m2:
+rule split_vcf_m2:
 	input:
 		vcf="{outpath}/03_variants/mutect2/00_initial_call/03_filter_mutect_call/{sample}.vcf.gz",
 		tbi="{outpath}/03_variants/mutect2/00_initial_call/03_filter_mutect_call/{sample}.vcf.gz.tbi"
@@ -130,7 +147,7 @@ rule spliet_vcf_m2:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bcftools_1.9"]
 	shell:
 		"""
 		 bcftools view \

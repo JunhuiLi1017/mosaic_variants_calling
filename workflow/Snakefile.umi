@@ -1,0 +1,10 @@
+include: "rules/00_common.smk"
+include: "rules/01_qc.smk"
+include: "rules/02_map_reads_umi.smk"
+
+rule all:
+    input:
+        expand("{outpath}/01_multiqc/multiqc_report.html", outpath=Outpath),
+        expand("{outpath}/02_map/07_summary/report_flagstat/multiqc_report.html", outpath=Outpath),
+        expand("{outpath}/02_map/07_summary/report_idxstats/multiqc_report.html", outpath=Outpath),
+        expand("{outpath}/02_map/07_summary/report_stats/multiqc_report.html", outpath=Outpath)

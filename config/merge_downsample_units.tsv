@@ -1,0 +1,5 @@
+sample	cx_bam	str_bam	downsample_seed
+sample1	/path/to/cx-1.bam	/path/to/str-1.bam	123456
+sample2	/path/to/cx-2.bam	/path/to/str-2.bam	789012
+NC1-sampleseed_123	/path/to/NC1-CX-sampleseed_123.sort.rmdup.bqsr.bam	/path/to/NC1-STR-sampleseed_123.sort.rmdup.bqsr.bam	456789
+

@@ -23,7 +23,7 @@ rule run_deepvariant:
 	resources:
 		mem_mb=resource['resource']['very_high']['mem_mb']
 	container:
-		"docker://ksinghal28/deepvariant:1.8.1"
+		container_image["deepvariant_1.8.1"]
 	shell:
 		"""
 		run_deepvariant \

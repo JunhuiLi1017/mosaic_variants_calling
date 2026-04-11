@@ -9,7 +9,7 @@ rule collect_cov:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	shell:
 		"""
-		grep "^COV" {input} | awk -F'/' '{{print $NF}}' | sed "s/\.txt.COV//g" | awk -F'.' '{{print $NF}}' | cut -f 1,3- > {output}
+		grep "^COV" {input} | awk -F'/' '{{print $NF}}' | sed 's/.samtools_stats.txt:COV//g' | awk -F'.' '{{print $NF}}' | cut -f 1,3- > {output}
 		"""
 
 rule calculate_mean_depth:
@@ -25,10 +25,9 @@ rule calculate_mean_depth:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["py_3.21"]
+		container_image["terra_py_tools"]
 	shell:
 		"""
-		grep "^COV" {input} | awk -F'/' '{{print $NF}}' | sed "s/\.txt.COV//g" | awk -F'.' '{{print $NF}}' | cut -f 1,3- > {output}
 		python {params.calculate_mean_depth_script} --input_cov {input} --input_genome_region {params.genome_region} --output {output}
 		"""
 
@@ -45,7 +44,7 @@ rule samtools_stats:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["samtools_1.20"]
+		container_image["samtools_1.20"]
 	shell:
 		"""
 		samtools stats {input.bam} > {output.stats}
@@ -64,7 +63,7 @@ rule samtools_idxstats:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["samtools_1.20"]
+		container_image["samtools_1.20"]
 	shell:
 		"""
 		samtools idxstats {input.bam} > {output.idxstats}
@@ -83,7 +82,7 @@ rule samtools_flagstat:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["samtools_1.20"]
+		container_image["samtools_1.20"]
 	shell:
 		"""
 		samtools flagstat {input.bam} > {output.flagstat}
@@ -142,26 +141,25 @@ rule multiqc_mapping:
 			sample=Sample
 		)
 	output:
-		report_map="{outpath}/02_map/multiqc_report_map.html",
-		report_raw="{outpath}/02_map/06_stats/multiqc_report.html",
-		data_dir="{outpath}/02_map/06_stats/multiqc_data"
+		report_map="{outpath}/02_map/multiqc_report_map.html"
 	params:
-		outdir="{outpath}/02_map/06_stats",
+		outdir="{outpath}/02_map",
+		data_dir="{outpath}/02_map/06_stats/multiqc_data",
 		title="Mapping Quality Report"
 	threads:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config['multiqc_1.22.3']
+		container_image['multiqc_1.22.3']
 	shell:
 		"""
+		mkdir -p {params.data_dir}
 		multiqc \
 			--outdir {params.outdir} \
 			--title "{params.title}" \
-			--filename multiqc_report.html \
-			--data-dir {output.data_dir} \
+			--filename multiqc_report_map.html \
+			--data-dir {params.data_dir} \
 			--force \
-			{params.outdir}
-		cp {output.report_raw} {output.report_map}
+			{params.outdir}/06_stats
 		"""

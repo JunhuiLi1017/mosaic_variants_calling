@@ -1,0 +1,16 @@
+include: "rules/00_common.smk"
+#include: "rules/01_qc.smk"
+#include: "rules/02_map_reads.smk"
+#include: "rules/02_map_report.smk"
+#include: "rules/03_variant_calling_mutect2.smk"
+#include: "rules/03_variant_calling_m2_mosaicforecast_anno.smk"
+include: "rules/03_mutect2_mito.smk"
+#include: "rules/03_variant_calling_haplotypecaller.smk"
+#include: "rules/03_variant_calling_deepvariant.smk"
+#include: "rules/03_variant_calling_deepsomatic.smk"
+#include: "rules/03_variant_calling_m2_deepmosaic.smk"
+#include: "rules/04_filter_anno_clinvar.smk"
+
+rule all:
+    input:
+        expand("{outpath}/03_variants/mutect2/00_chrM/08_annovar/{sample}.{ref_version}_multianno.txt", outpath=Outpath, sample=Sample, ref_version=Ref_version)

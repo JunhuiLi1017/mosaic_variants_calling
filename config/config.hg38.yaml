@@ -3,7 +3,7 @@
 ##-------------------
 units: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/mosaic_variants_calling/config/units.tsv
 resource: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/IDT_target/20250714/config/resources.yaml
-
+container_image: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/mosaic_variants_calling/config/container_image.yaml
 outpath: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/02ProcessedData/target_seq/20250808
 
 ##-------------------
@@ -28,11 +28,12 @@ calculate_mean_depth_script:  /pi/michael.lodato-umw/junhui.li11-umw/BautistaSot
 ##-------------------
 ## mosaicforecast model
 ##-------------------
-refine_beta: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/250xRFmodel_addRMSK_Refine.rds
+#refine_beta: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/250xRFmodel_addRMSK_Refine.rds
+refine_beta: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/02ProcessedData/WGS/14_retrain_mosaic_model/04_retrain/02_train/refine_rna_igv_2nd.rds
 phase_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/brain_MT2-PON.250x_MosaicForecast-Phase_pvalue.rds
 insertion_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/insertions_250x.RF.rds
 deletion_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/05softwares/mosaicforecast/MosaicForecast-master/models_trained/deletions_250x.RF.rds
-coverage: 250x
+coverage: 50x
 
 ##-------------------
 ## gnomad
@@ -50,6 +51,9 @@ gnomad_genome_header: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesa
 gnomad_LoF: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/gene_score_als_gene/gnomad_LoF_hg38.reform.txt
 rCNV_gene_score: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/03Database/gene_score_als_gene/rCNV_gene_score.hg38.txt
 deepvariant_model: WGS
+contamination_vaf: 0.001
+filter_mutect_calls_min_af: 0
+
 
 ##-------------------
 ## software
@@ -79,34 +83,3 @@ prediction_snv_model: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesa
 
 mosaic_pred_model:
   - Refine
-
-
-##-------------------
-## container
-##-------------------
-##-------01_qc-------
-bedtools_2.31.1: docker://junhuili/terra_bedtools:2.31.1--h13024bc_3
-fastp_0.22.0: docker://junhuili/fastp:latest
-fastqc_0.11.9: docker://biocontainers/fastqc:v0.11.9_cv8
-multiqc_1.22.3: docker://multiqc/multiqc:latest
-
-##-------02_map-------
-samtools_1.20: docker://junhuili/terra_samtools:1.20
-sambamba_1.0.1: docker://junhuili/sambamba:1.0.1
-terra_deeptools_0.1: docker://junhuili/terra_deeptools:0.1
-gatk_4.6.1.0: docker://broadinstitute/gatk:4.6.1.0
-gatk_4.1.8.1: docker://broadinstitute/gatk:4.1.8.1
-py_3.21: docker://python:alpine3.21
-
-##-------03_variant_calling-------
-vcftools_0.1.16: docker://biocontainers/vcftools:v0.1.16-1-deb_cv1
-bcftools_1.9: docker://biocontainers/bcftools:v1.9-1-deb_cv1
-
-deepsomatic_1.8.0: /pi/michael.lodato-umw/junhui.li11-umw/BautistaSotelo_Cesar/20201130_MosaicVariant_DNA/00script/00_pipeline/mosaic_variants_calling_largeinput/workflow/envs/deepsomatic_1.8.0.sif
-deepvariant_1.8.1: docker://ksinghal28/deepvariant:1.8.1
-terra_r: docker://junhuili/terra_r:latest
-python_alpine3.21: docker://python:alpine3.21
-
-##-------04_filter-------
-terra_py_tools: docker://junhuili/terra_py_tools:latest
-terra_perl_anno: docker://junhuili/terra_perl_anno:latest

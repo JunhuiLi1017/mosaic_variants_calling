@@ -21,7 +21,7 @@ rule run_deepsomatic:
 	resources:
 		mem_mb=resource['resource']['very_high']['mem_mb']
 	container:
-		config["deepsomatic_1.8.0"]
+		container_image["deepsomatic_1.8.0"]
 	shell:
 		"""
 		run_deepsomatic \

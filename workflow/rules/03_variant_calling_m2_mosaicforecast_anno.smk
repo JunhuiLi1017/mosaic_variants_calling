@@ -47,8 +47,8 @@ rule repeat_filter:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
-	conda:
-		config["bcftools_1.9"]
+	container:
+		container_image["bedtools_2.27.1"]
 	shell:
 		'''
 		subtractBed -a {input.mt2pon} -b {params.segdup} > {output}
@@ -93,8 +93,8 @@ rule MAF0_extraction_INS:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
-	conda:
-		config["bcftools_1.9"]
+	container:
+		container_image["bedtools_2.27.1"]
 	shell:
 		"subtractBed -a <(cat {input.file1}|awk '\''{{OFS=\"\\t\";print $1,$2-1,$2,$4,$5,$6}}'\'' |awk '\''length($4)< length($5)'\'') -b {params.allrepeats_forindel} | awk 'BEGIN{{OFS=\"\\t\"}} $1=\"chr\"$1' > {output}"
 
@@ -109,8 +109,8 @@ rule MAF0_extraction_DEL:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
-	conda:
-		config["bcftools_1.9"]
+	container:
+		container_image["bedtools_2.27.1"]
 	shell:
 		"subtractBed -a <(cat {input.file1}|awk '\''{{OFS=\"\\t\";print $1,$2-1,$2,$4,$5,$6}}'\'' | awk '\''length($4)> length($5)'\'') -b {params.allrepeats_forindel} | awk 'BEGIN{{OFS=\"\\t\"}} $1=\"chr\"$1' > {output}"
 
@@ -145,7 +145,7 @@ rule feature_extraction_SNV_chunk:
 	input:
 		bed="{outpath}/03_variants/mutect2/00_mosaicforecast/04_extrac_SNV_INDEL_split/{sample}.{individual_chr}.snv.bed",
 		bam="{outpath}/02_map/08_bqsr/{sample}.bam",
-		bai="{outpath}/02_map/08_bqsr/{sample}.bai"
+		bai="{outpath}/02_map/08_bqsr/{sample}.bam.bai"
 	output:
 		feature="{outpath}/03_variants/mutect2/00_mosaicforecast/05_feature_each_chromosome/{sample}.SNV.{individual_chr}.features"
 	params:
@@ -160,7 +160,7 @@ rule feature_extraction_SNV_chunk:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["terra_py_tools"]
+		container_image["terra_py_tools"]
 	shell:
 		'''
 		export PYTHONWARNINGS="ignore" 
@@ -179,7 +179,7 @@ rule merge_features_SNV:
 		lambda wildcards: [f"{wildcards.outpath}/03_variants/mutect2/00_mosaicforecast/05_feature_each_chromosome/{wildcards.sample}.SNV.{chr}.features" for chr in CHROMOSOMES]
 		#expand("{{outpath}}/03_variants/mutect2/00_mosaicforecast/05_feature_each_chromosome/{{sample}}.SNV.{chr}.features" for chr in CHROMOSOMES)
 	output:
-		feature="{outpath}/03_variants/mutect2/00_mosaicforecast/05_feature/{sample}.SNV.features"
+		feature="{outpath}/03_variants/mutect2/00_mosaicforecast/05_feature/{sample}.SNV.features.bak"
 	threads: 1
 	resources:
 		mem_mb=1000
@@ -193,9 +193,43 @@ rule merge_features_SNV:
 		done
 		'''
 
+rule feature_extraction_SNV:
+	input:
+		file1="{outpath}/03_variants/mutect2/00_mosaicforecast/04_extrac_SNV_INDEL/{sample}.MAF0.SNV.chr.bed",
+		file2="{outpath}/02_map/08_bqsr/{sample}.bam"
+	output:
+		"{outpath}/03_variants/mutect2/00_mosaicforecast/05_feature/{sample}.SNV.features"
+	params:
+		outdir="{outpath}/02_map/08_bqsr/",
+		umap=config['umap'],
+		ReadLevel_Features_extraction=config['ReadLevel_Features_extraction'],
+		ref=config['reference']
+	log:
+		"{outpath}/03_variants/logs/{sample}.SNV.features.log"
+	threads:
+		resource['resource']['medium']['threads']
+	resources:
+		mem_mb=resource['resource']['medium']['mem_mb']
+	container:
+		container_image["terra_py_tools"]
+	shell:
+		'''
+		if [ ! -s {input.file1} ]; then
+			echo "Warning: {input.file1} is empty. Skipping SNV feature extraction." > {log}
+			: > {output}
+			exit 0
+		fi
+
+		export PYTHONWARNINGS="ignore" 
+		python {params.ReadLevel_Features_extraction} \
+		{input.file1} \
+		{output} \
+		{params.outdir} \
+		{params.ref} \
+		{params.umap} 1 bam > {log} 2>&1
+		'''
+
 rule feature_extraction_INS:
-	message:
-		"since snakemake cannot create a conda env from ../envs/py3.7.1.yaml, but we would like to use --use-conda, so we use conda activate"
 	input:
 		file1="{outpath}/03_variants/mutect2/00_mosaicforecast/04_extrac_SNV_INDEL/{sample}.MAF0.INS.chr.bed",
 		file2="{outpath}/02_map/08_bqsr/{sample}.bam"
@@ -213,9 +247,15 @@ rule feature_extraction_INS:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["terra_py_tools"]
+		container_image["terra_py_tools"]
 	shell:
 		'''
+		if [ ! -s {input.file1} ]; then
+			echo "Warning: {input.file1} is empty. Skipping INS feature extraction." > {log}
+			: > {output}
+			exit 0
+		fi
+
 		export PYTHONWARNINGS="ignore" 
 		python {params.ReadLevel_Features_extraction} \
 		{input.file1} \
@@ -243,9 +283,15 @@ rule feature_extraction_DEL:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["terra_py_tools"]
+		container_image["terra_py_tools"]
 	shell:
 		'''
+		if [ ! -s {input.file1} ]; then
+			echo "Warning: {input.file1} is empty. Skipping DEL feature extraction." > {log}
+			: > {output}
+			exit 0
+		fi
+
 		export PYTHONWARNINGS="ignore" 
 		python {params.ReadLevel_Features_extraction} \
 		{input.file1} \
@@ -269,9 +315,15 @@ rule g1000_avail_acess_filter_SNV:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bedtools_2.27.1"]
 	shell:
 		'''
+		if [ ! -s {input} ]; then
+			echo "Warning: {input} is empty. Skipping SNV avail-access filtering." >&2
+			: > {output}
+			exit 0
+		fi
+
 		cat <(head -n 1 {input}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input} | cut -f 2-3) {input}) | cut -f 3-) > {output}
 		'''
 
@@ -287,9 +339,15 @@ rule g1000_avail_acess_filter_INS:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bedtools_2.27.1"]
 	shell:
 		'''
+		if [ ! -s {input.feature} ]; then
+			echo "Warning: {input.feature} is empty. Skipping INS avail-access filtering." >&2
+			: > {output}
+			exit 0
+		fi
+
 		cat <(head -n 1 {input.feature}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input.feature} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input.feature} | cut -f 2-3) {input.feature}) | cut -f 3-) > {output}
 		'''
 
@@ -305,9 +363,15 @@ rule g1000_avail_acess_filter_DEL:
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bedtools_2.27.1"]
 	shell:
 		'''
+		if [ ! -s {input.feature} ]; then
+			echo "Warning: {input.feature} is empty. Skipping DEL avail-access filtering." >&2
+			: > {output}
+			exit 0
+		fi
+
 		cat <(head -n 1 {input.feature}) <(awk 'NR==FNR{{c[$1,$2]=$0}}NR!=FNR{{if(c[$1,$2]){{print $0}}}}' <(bedtools intersect -a <(sed 's/~/\t/g' {input.feature} | awk '{{print $2"\t"$3"\t"$3}}' | grep -v "conflict_num") -b {params.avail_acess_1000g} -wa) <(paste <(sed 's/~/\t/g' {input.feature} | cut -f 2-3) {input.feature}) | cut -f 3-) > {output}
 		'''
 
@@ -317,18 +381,24 @@ rule Prediction_SNV:
 	output:
 		"{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.SNV.predictions"
 	params:
-		refine_beta=config['refine_beta'] if config['mosaic_pred_model'] == 'Refine' else config['phase_model'],
-		model=config['mosaic_pred_model'],
+		trained_model=config['phase_model'] if config['mosaic_pred_model'] == 'Phase' else config['refine_beta'],
+		model_type=config['mosaic_pred_model'],
 		prediction_r_script=config['prediction_r_script']
 	threads:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["terra_r"]
+		container_image["terra_r"]
 	shell:
 		'''
-		Rscript {params.prediction_r_script} {input.file1} {params.refine_beta} {params.model} {output}
+		if [ ! -s {input.file1} ]; then
+			echo "Warning: {input.file1} is empty. Skipping SNV prediction." >&2
+			: > {output}
+			exit 0
+		fi
+
+		Rscript {params.prediction_r_script} {input.file1} {params.trained_model} {params.model_type} {output}
 		'''
 
 rule Prediction_INS:
@@ -337,18 +407,24 @@ rule Prediction_INS:
 	output:
 		"{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.INS.predictions"
 	params:
-		model=config['mosaic_pred_model'],
-		refine_beta=config['insertion_model'],
+		model_type=config['mosaic_pred_model'],
+		trained_model=config['insertion_model'],
 		prediction_r_script=config['prediction_r_script']
 	threads:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["terra_r"]
+		container_image["terra_r"]
 	shell:
 		'''
-		Rscript {params.prediction_r_script} {input.file1} {params.refine_beta} {params.model} {output}
+		if [ ! -s {input.file1} ]; then
+			echo "Warning: {input.file1} is empty. Skipping INS prediction." >&2
+			: > {output}
+			exit 0
+		fi
+
+		Rscript {params.prediction_r_script} {input.file1} {params.trained_model} {params.model_type} {output}
 		'''
 
 rule Prediction_DEL:
@@ -357,18 +433,24 @@ rule Prediction_DEL:
 	output:
 		"{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.DEL.predictions"
 	params:
-		model=config['mosaic_pred_model'],
-		refine_beta=config['deletion_model'],
+		model_type=config['mosaic_pred_model'],
+		trained_model=config['deletion_model'],
 		prediction_r_script=config['prediction_r_script']
 	threads:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["terra_r"]
+		container_image["terra_r"]
 	shell:
 		'''
-		Rscript {params.prediction_r_script} {input.file1} {params.refine_beta} {params.model} {output}
+		if [ ! -s {input.file1} ]; then
+			echo "Warning: {input.file1} is empty. Skipping DEL prediction." >&2
+			: > {output}
+			exit 0
+		fi
+
+		Rscript {params.prediction_r_script} {input.file1} {params.trained_model} {params.model_type} {output}
 		'''
 
 rule extract_bed_snv:
@@ -385,6 +467,12 @@ rule extract_bed_snv:
 		model="{model}"
 	shell:
 		'''
+		if [ ! -s {input.prediction_snv} ]; then
+			echo "Warning: {input.prediction_snv} is empty. Creating empty SNV BED." >&2
+			: > {output.bed_snv}
+			exit 0
+		fi
+
 		if [ "{params.model}" = "Phase" ]; then
 			awk '$35=="hap=3"{{print $0}}' {input.prediction_snv} > {params.temp_file}
 		else
@@ -411,6 +499,12 @@ rule extract_bed_ins:
 		temp_file="{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.INS.{ref_version}.bed.temp_file"
 	shell:
 		'''
+		if [ ! -s {input.prediction_ins} ]; then
+			echo "Warning: {input.prediction_ins} is empty. Creating empty INS BED." >&2
+			: > {output.bed_ins}
+			exit 0
+		fi
+
 		awk '$35=="hap=3"{{print $0}}' {input.prediction_ins} > {params.temp_file}
 		if [ -s {params.temp_file} ]; then
 			cat {params.temp_file} | cut -f 1 | cut -d"~" -f2-5 | sed 's/~/\t/g' | grep -v "id" | awk 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$2,$3,$4}}' | sort -k1,1 -k2,2n > {output.bed_ins}
@@ -433,6 +527,12 @@ rule extract_bed_del:
 		temp_file="{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.DEL.{ref_version}.bed.temp_file"
 	shell:
 		'''
+		if [ ! -s {input.prediction_del} ]; then
+			echo "Warning: {input.prediction_del} is empty. Creating empty DEL BED." >&2
+			: > {output.bed_del}
+			exit 0
+		fi
+
 		awk '$35=="hap=3"{{print $0}}' {input.prediction_del} > {params.temp_file}
 		if [ -s {params.temp_file} ]; then
 			cat {params.temp_file} | cut -f 1 | cut -d"~" -f2-5 | sed 's/~/\t/g' | grep -v "id" | awk 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$2,$3,$4}}' | sort -k1,1 -k2,2n > {output.bed_del}
@@ -461,7 +561,7 @@ rule merge_bed_snv_indel:
 
 rule extrac_all_subvcf:
 	input:
-		vcf="{outpath}/03_variants/mutect2/00_initial_call/03_filter_mutect_call/{sample}.mt2pon.filter.vcf.gz",
+		vcf="{outpath}/03_variants/mutect2/00_initial_call/03_filter_mutect_call/{sample}.vcf.gz",
 		bed="{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.all.{ref_version}.bed"
 	output:
 		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz",
@@ -471,10 +571,9 @@ rule extrac_all_subvcf:
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["bedtools_2.31.1"]
+		container_image["bcftools_1.9"]
 	shell:
 		'''
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate bcftools
 		# Check if BED file is empty
 		if [ -s {input.bed} ]; then
 			# Non-empty BED: filter VCF and generate outputs
@@ -488,18 +587,17 @@ rule extrac_all_subvcf:
 			bcftools view -h {input.vcf} | bgzip > {output.vcf}
 			echo -e "Chr\tpos\tREF\tALT\tGenotype\tDPT_REF\tDPT_ALT\tAF\tDPT" > {output.dpaf}
 		fi
-		tabix -p vcf {output.vcf}
-		conda deactivate		
+		bcftools index {output.vcf}
 		'''
 
-rule anno_gnomAD_dbsbp:
+rule anno_gnomAD_dbsnp:
 	input:
 		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz",
 	output:
 		vcf_anno_dbsnp="{outpath}/03_variants/mutect2/00_mosaicforecast/08_anno_gnomAD_dbsnp/{sample}.{model}.{cov}.all.anno.dbsnp.{ref_version}.vcf.gz",
 		vcf_anno_exome="{outpath}/03_variants/mutect2/00_mosaicforecast/08_anno_gnomAD_dbsnp/{sample}.{model}.{cov}.all.anno.exome.{ref_version}.vcf.gz",
 		vcf_anno_genome="{outpath}/03_variants/mutect2/00_mosaicforecast/08_anno_gnomAD_dbsnp/{sample}.{model}.{cov}.all.anno.exome.genome.{ref_version}.vcf.gz",
-		tbi_anno_genome="{outpath}/03_variants/mutect2/00_mosaicforecast/08_anno_gnomAD_dbsnp/{sample}.{model}.{cov}.all.anno.exome.genome.{ref_version}.vcf.gz.tbi"
+		tbi_anno_genome="{outpath}/03_variants/mutect2/00_mosaicforecast/08_anno_gnomAD_dbsnp/{sample}.{model}.{cov}.all.anno.exome.genome.{ref_version}.vcf.gz.csi"
 	log:
 		"{outpath}/03_variants/logs/{sample}.{model}.{cov}.all.{ref_version}.dbsnp.gnomad.logs"
 	params:
@@ -513,17 +611,16 @@ rule anno_gnomAD_dbsbp:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bcftools_1.9"]
 	shell:
 		'''
-		source ~/anaconda3/etc/profile.d/conda.sh; conda activate bcftools
 		bcftools annotate \
 			-a {params.dbsnp} \
 			-c ID \
 			{input.vcf} \
 			-o {output.vcf_anno_dbsnp} \
 			-Oz > {log} 2>&1
-		tabix -p vcf {output.vcf_anno_dbsnp}
+		bcftools index {output.vcf_anno_dbsnp}
 
 		# Annotate with exome data
 		bcftools annotate \
@@ -532,8 +629,8 @@ rule anno_gnomAD_dbsbp:
 			-c CHROM,POS,POS,REF,ALT,AF_exome,AF_popmax_exome \
 			{output.vcf_anno_dbsnp} \
 			-o {output.vcf_anno_exome} \
-			-Oz > {log} 2>&1
-		tabix -p vcf {output.vcf_anno_exome}
+			-Oz >> {log} 2>&1
+		bcftools index {output.vcf_anno_exome}
 
 		# Annotate with genome data
 		bcftools annotate \
@@ -543,38 +640,39 @@ rule anno_gnomAD_dbsbp:
 			{output.vcf_anno_exome} \
 			-o {output.vcf_anno_genome} \
 			-Oz >> {log} 2>&1
-		tabix -p vcf {output.vcf_anno_genome}
+		bcftools index {output.vcf_anno_genome}
 		'''
 
 rule process_tier:
 	input:
 		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/08_anno_gnomAD_dbsnp/{sample}.{model}.{cov}.all.anno.exome.genome.{ref_version}.vcf.gz",
-		tbi="{outpath}/03_variants/mutect2/00_mosaicforecast/08_anno_gnomAD_dbsnp/{sample}.{model}.{cov}.all.anno.exome.genome.{ref_version}.vcf.gz.tbi"
+		tbi="{outpath}/03_variants/mutect2/00_mosaicforecast/08_anno_gnomAD_dbsnp/{sample}.{model}.{cov}.all.anno.exome.genome.{ref_version}.vcf.gz.csi"
 	output:
-		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/09_mosaic_tier/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz",
-		tbi="{outpath}/03_variants/mutect2/00_mosaicforecast/09_mosaic_tier/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz.tbi"
+		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/09_mosaic_tier/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz"
 	log:
 		"{outpath}/03_variants/logs/{sample}.{model}.{cov}.all.{ref_version}.tier.logs"
 	params:
-		process_tier_script=config['process_tier_script']
+		process_tier_script=config['process_tier_script'],
+		out_dir="{outpath}/03_variants/mutect2/00_mosaicforecast/09_mosaic_tier/"
 	threads:
 		resource['resource']['medium']['threads']
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["python_alpine3.21"]
+		container_image["terra_py_tools"]
 	shell:
 		'''
+		mkdir -p {params.out_dir}
 		python {params.process_tier_script} {input.vcf} {output.vcf}
-		tabix -p vcf {output.vcf}
 		'''
 
 rule Annotation:
 	input:
-		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/09_mosaic_tier/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz",
-		tbi="{outpath}/03_variants/mutect2/00_mosaicforecast/09_mosaic_tier/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz.tbi"
+		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/09_mosaic_tier/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz"
+		#vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/07_mosaic_prediction/{sample}.{model}.{cov}.all.{ref_version}.vcf.gz"
 	output:
-		outputanno="{outpath}/03_variants/mutect2/00_mosaicforecast/10_annovar/{sample}.{model}.{cov}.all.{ref_version}_multianno.txt"
+		outputanno="{outpath}/03_variants/mutect2/00_mosaicforecast/10_annovar/{sample}.{model}.{cov}.all.{ref_version}_multianno.txt",
+		outputvcf="{outpath}/03_variants/mutect2/00_mosaicforecast/10_annovar/{sample}.{model}.{cov}.all.{ref_version}_multianno.vcf"
 	params:
 		annovar_dir=config['annovar_dir'],
 		ref_version=config['ref_version'],
@@ -585,7 +683,7 @@ rule Annotation:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["terra_perl_anno"]
+		container_image["terra_perl_anno"]
 	shell:
 		'''
 		if [ $(zgrep -v '^#' {input.vcf} | wc -l) != 0 ]; then
@@ -615,14 +713,16 @@ rule reformat_annotation_clinvar:
 		"{outpath}/03_variants/04_deepvariant/logs/{sample}.{model}.{cov}.{ref_version}.m2.reforma_anno.log"
 	params:
 		reformat_script=config['reformat_script'],
+		out_dir="{outpath}/03_variants/mutect2/00_mosaicforecast/11_annovar_reformat"
 	threads:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["python_alpine3.21"]
+		container_image["terra_py_tools"]
 	shell:
 		"""
+		mkdir -p {params.out_dir}
 		python {params.reformat_script} {input.anno} {output.anno} --info-column "Otherinfo12" --gt-column "Otherinfo13" > {log} 2>&1
 		"""
 
@@ -659,35 +759,83 @@ rule reformat_rcnv_gnomadlof:
 		"{outpath}/03_variants/04_deepvariant/logs/{sample}.{model}.{cov}.{ref_version}.m2.reformat.log"
 	params:
 		reformat_script=config['reformat_script'],
+		out_dir="{outpath}/03_variants/mutect2/00_mosaicforecast/11_annovar_reformat"
 	threads:
 		resource['resource']['low']['threads']
 	resources:
 		mem_mb=resource['resource']['low']['mem_mb']
 	container:
-		config["python_alpine3.21"]
+		container_image["terra_py_tools"]
 	shell:
 		"""
-		python {params.reformat_script} {input.txt} {output.txt} --info-column "Otherinfo12" --gt-column "Otherinfo13" > {log} 2>&1
+		if [ $(tail -n +2 {input.txt} | grep -cv '^$') -eq 0 ]; then
+			echo "Warning: {input.txt} contains only header; skipping reformat." >&2
+			head -n 1 {input.txt} > {output.txt}
+		else
+			mkdir -p {params.out_dir}
+			python {params.reformat_script} {input.txt} {output.txt} --info-column "Otherinfo12" --gt-column "Otherinfo13" > {log} 2>&1
+		fi
 		"""
 
-rule summary:
+rule sort_vcf:
 	input:
-		ins=expand([
+		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/10_annovar/{sample}.{model}.{cov}.all.{ref_version}_multianno.vcf"
+	output:
+		vcf="{outpath}/03_variants/mutect2/00_mosaicforecast/12_annovar_sort_vcf/{sample}.{model}.{cov}.all.sort.{ref_version}_multianno.vcf"
+	log:
+		"{outpath}/03_variants/04_deepvariant/logs/{sample}.{model}.{cov}.{ref_version}.12_annovar_sort_vcf.log"
+	threads:
+		resource['resource']['medium']['threads']
+	resources:
+		mem_mb=resource['resource']['medium']['mem_mb']
+	container:
+		container_image["bcftools_1.9"]
+	shell:
+		'''
+		bcftools sort {input.vcf} -O v -o {output.vcf} > {log} 2>&1
+		'''
+
+rule m2_mosaic_report:
+	input:
+		annovar_reformat=expand([
 			"{outpath}/03_variants/mutect2/00_mosaicforecast/11_annovar_reformat/{sample}.{model}.{cov}.all.{ref_version}_multianno.txt",
 			"{outpath}/03_variants/mutect2/00_mosaicforecast/11_annovar_reformat/{sample}.{model}.{cov}.exonic.splicing.{ref_version}.txt"
 			],
 			outpath=Outpath,
 			model=Model,
-			cov=Coverage,
-			sample=Sample,
-			ref_version=Ref_version)
+			cov=[units[units['sample'] == sample]['depth'].iloc[0] for sample in Sample.unique()],
+			sample=Sample.unique(),
+			ref_version=Ref_version),
+		annovar_vcf=expand([
+			"{outpath}/03_variants/mutect2/00_mosaicforecast/12_annovar_sort_vcf/{sample}.{model}.{cov}.all.sort.{ref_version}_multianno.vcf"
+			],
+			outpath=Outpath,
+			model=Model,
+			cov=[units[units['sample'] == sample]['depth'].iloc[0] for sample in Sample.unique()],
+			sample=Sample.unique(),
+			ref_version=Ref_version),
+		bam_stats=expand([
+			"{outpath}/02_map/08_bqsr/{sample}.bam.stat.txt"
+			],
+			outpath=Outpath,
+			sample=Sample.unique())
 	output:
 		snv="{outpath}/03_variants/mosaic_report.html"
+	log:
+		"{outpath}/03_variants/logs/mosaic_report.log"
+	params:
+		ref=config['reference'],
+		input_args=lambda wildcards, input: " ".join(f"-V:{sample} {i}" for sample,i in zip(Sample.unique(),input.annovar_vcf))
 	threads:
-		resource['resource']['low']['threads']
+		resource['resource']['high']['threads']
 	resources:
-		mem_mb=resource['resource']['low']['mem_mb']
+		mem_mb=resource['resource']['high']['mem_mb']
+	container:
+		container_image["variantqc_1.3.87"]
 	shell:
 		'''
-		echo {output.snv}
+		java -jar /app/DISCVRSeq.jar VariantQC \
+		-R {params.ref} \
+		{params.input_args} \
+		-O {output} > {log} 2>&1
 		'''

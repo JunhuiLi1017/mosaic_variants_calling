@@ -1,6 +1,6 @@
 rule haplotypecaller:
 	input:
-		bam="{outpath}/02_map/08_bqsr/{sample}/{sample}.bam"
+		bam="{outpath}/02_map/08_bqsr/{sample}.bam"
 	output:
 		vcf="{outpath}/03_variants/haplotypecaller/00_initial_call/01_sub_vcf/{sample}.{chr}.g.vcf.gz",
 		tbi="{outpath}/03_variants/haplotypecaller/00_initial_call/01_sub_vcf/{sample}.{chr}.g.vcf.gz.tbi"
@@ -8,16 +8,15 @@ rule haplotypecaller:
 		"{outpath}/03_variants/logs/{sample}.{chr}.haplotypecaller.log"
 	params:
 		ref=config['reference'],
-		gatk=config['gatk_current_using'],
 		dbsnp138=config['dbsnp138'],
 		interval=intervals_dir + "/{chr}.intervals.list",
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
-		resource['resource']['very_high']['threads']
+		resource['resource']['high']['threads']
 	resources:
-		mem_mb=resource['resource']['very_high']['mem_mb']
+		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -26,6 +25,7 @@ rule haplotypecaller:
 		-R {params.ref} \
 		-I {input.bam}\
 		-L {params.interval} \
+		-ERC GVCF \
 		--dbsnp {params.dbsnp138} > {log} 2>&1
 		"""
 
@@ -47,7 +47,6 @@ rule mergevcfs:
 		vcf_gz="{outpath}/03_variants/haplotypecaller/00_initial_call/02_merge_rawvcf/{sample}.g.vcf.gz",
 		vcf_tbi="{outpath}/03_variants/haplotypecaller/00_initial_call/02_merge_rawvcf/{sample}.g.vcf.gz.tbi"
 	params:
-		gatk=config['gatk_current_using'],
 		input_args=lambda wildcards, input: " ".join(f"--INPUT {vcf}" for vcf in input.vcf),
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
 	threads:
@@ -55,7 +54,7 @@ rule mergevcfs:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		'''
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -95,10 +94,9 @@ rule genomics_db_import:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	params:
 		ref=config['reference'],
-		gatk=config['gatk_current_using'],
 		interval_list=intervals_dir + "/{chr}.intervals.list",
 		tmp_dir="{outpath}/03_variants/haplotypecaller/00_initial_call/02_genomicsdb/temp_dir_{chr}",
 		gvcf_list=lambda wildcards, input: " ".join([f"-V {gvcf}" for gvcf in input]),
@@ -129,14 +127,13 @@ rule genotype_gvcfs:
 		"{outpath}/03_variants/logs/{chr}.genotype_gvcfs.log"
 	params:
 		ref=config['reference'],
-		gatk=config['gatk_current_using'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
 		resource['resource']['very_high']['threads']
 	resources:
 		mem_mb=resource['resource']['very_high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -162,9 +159,8 @@ rule merge_vcfs:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	params:
-		gatk=config['gatk_current_using'],
 		vcf_list=lambda wildcards, input: " ".join([f"-I {vcf}" for vcf in input.vcfs]),
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	shell:
@@ -192,14 +188,13 @@ rule variant_recalibrator_snp:
 		omni=config["omni"],
 		g1000_known_indels=config["g1000_known_indels"],
 		dbsnp=config["dbsnp138"],
-		gatk=config['gatk_current_using'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
 		resource['resource']['high']['threads']
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -234,14 +229,13 @@ rule variant_recalibrator_indel:
 		ref=config['reference'],
 		mills=config["mills_and_1000g"],
 		dbsnp=config["dbsnp138"],
-		gatk=config['gatk_current_using'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
 		resource['resource']['high']['threads']
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -274,7 +268,6 @@ rule apply_vqsr_snp:
 		"{outpath}/03_variants/logs/apply_vqsr_snp/all.log"
 	params:
 		ref=config['reference'],
-		gatk=config['gatk_current_using'],
 		truth_sensitivity=['truth_sensitivity'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
@@ -282,7 +275,7 @@ rule apply_vqsr_snp:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -310,7 +303,6 @@ rule apply_vqsr_indel:
 		"{outpath}/03_variants/logs/apply_vqsr_indel.log"
 	params:
 		ref=config['reference'],
-		gatk=config['gatk_current_using'],
 		truth_sensitivity=['truth_sensitivity'],
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 2000)
 	threads:
@@ -318,7 +310,7 @@ rule apply_vqsr_indel:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["gatk_4.1.8.1"]
+		container_image["gatk_4.1.8.1"]
 	shell:
 		"""
 		gatk --java-options "-Xms{params.command_mem}m -XX:ParallelGCThreads={threads}" \
@@ -349,7 +341,7 @@ rule split_vcf:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config["bcftools_1.9"]
+		container_image["bcftools_1.9"]
 	shell:
 		"""
 		 bcftools view \

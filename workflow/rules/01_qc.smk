@@ -57,7 +57,7 @@ rule fastp:
 	resources:
 		mem_mb=resource['resource']['high']['mem_mb']
 	container:
-		config['fastp_0.22.0']
+		container_image['fastp_0.22.0']
 	shell:
 		"""
 		fastp {params.trim_expr} \
@@ -85,7 +85,7 @@ rule fastqc:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config['fastqc_0.11.9']
+		container_image['fastqc_0.11.9']
 	shell:
 		"fastqc -o {params.fastqc_out} {input} > {log} 2>&1"
 
@@ -104,7 +104,7 @@ rule multiqc:
 	resources:
 		mem_mb=resource['resource']['medium']['mem_mb']
 	container:
-		config['multiqc_1.22.3']
+		container_image['multiqc_1.22.3']
 	shell:
 		"""
 		multiqc -o {params.out_multiqc} {params.in_fastqc} --force
