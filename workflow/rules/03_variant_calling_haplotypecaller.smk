@@ -50,9 +50,9 @@ rule mergevcfs:
 		input_args=lambda wildcards, input: " ".join(f"--INPUT {vcf}" for vcf in input.vcf),
 		command_mem=lambda wildcards, resources, threads: (resources.mem_mb * threads - 1000)
 	threads:
-		resource['resource']['medium']['threads']
+		resource['resource']['high']['threads']
 	resources:
-		mem_mb=resource['resource']['medium']['mem_mb']
+		mem_mb=resource['resource']['high']['mem_mb']
 	container:
 		container_image["gatk_4.1.8.1"]
 	shell:

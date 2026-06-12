@@ -29,6 +29,7 @@ units['trim_front2'] = pd.to_numeric(units['trim_front2'], errors='coerce').fill
 units['trim_tail1'] = pd.to_numeric(units['trim_tail1'], errors='coerce').fillna(0).astype(int)
 units['trim_tail2'] = pd.to_numeric(units['trim_tail2'], errors='coerce').fillna(0).astype(int)
 units['depth'] = pd.to_numeric(units['depth'], errors='coerce').fillna(0).astype(int)
+units['sex'] = units['sex'].astype(str)
 units['pcr_based'] = units['pcr_based'].map({'Yes': True, 'No': False, 'TRUE': True, 'FALSE': False, '1': True, '0': False, 'True': True, 'False': False}).astype(bool)
 
 validate(units, schema = "../schemas/units.schema.yaml")
